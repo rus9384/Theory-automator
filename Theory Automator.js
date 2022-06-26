@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1";
+var version = "1.0a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -150,7 +150,7 @@ class T1 {
 		
 		if (buySkip()) return;
 
-		if (theoryManager.theory.tau >= theoryManager.coast) return;
+		if (theoryManager.theory.tau >= theoryManager.coast && enablePublications.level) return;
 
 		this.c4.buy(-1); // autobuy	
 
@@ -215,19 +215,19 @@ class T2 {
 		
 		if (buySkip()) return;
 		
-		if (publicationMultiplier(this.theory) >= this.qr1) return;
+		if (publicationMultiplier(this.theory) >= this.qr1 && enablePublications.level) return;
 		this.upgrades[0].buy(-1);
 		this.upgrades[4].buy(-1);
 		
-		if (publicationMultiplier(this.theory) >= this.qr2) return;
+		if (publicationMultiplier(this.theory) >= this.qr2 && enablePublications.level) return;
 		this.upgrades[1].buy(-1);
 		this.upgrades[5].buy(-1);
 
-		if (publicationMultiplier(this.theory) >= this.qr3) return;
+		if (publicationMultiplier(this.theory) >= this.qr3 && enablePublications.level) return;
 		this.upgrades[2].buy(-1);
 		this.upgrades[6].buy(-1);
 		
-		if (publicationMultiplier(this.theory) >= this.qr4) return;
+		if (publicationMultiplier(this.theory) >= this.qr4 && enablePublications.level) return;
 		this.upgrades[3].buy(-1);
 		this.upgrades[7].buy(-1);		
 				
@@ -470,7 +470,7 @@ class T4 {
 		
 		if (buySkip()) return;
 		
-		if (this.theory.tau >= this.coast) return;
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
 		
 		if (this.theory.currencies[0].value == 0)
 			this.c1.buy(1);
@@ -608,7 +608,7 @@ class T5 {
 		
 		if (buySkip()) return;
 		
-		if (this.theory.tau >= this.coast) return;
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
 
 		if (this.theory.currencies[0].value == 0)
 			this.q1.buy(1);
@@ -732,7 +732,7 @@ class T6 {
 		
 		if (buySkip()) return;
 		
-		if (this.theory.tau >= this.coast) return;
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
 		
 		buyRatio(this.r2, 10);
 		
@@ -843,7 +843,7 @@ class T7 {
 		
 		if (buySkip()) return;
 		
-		if (this.theory.tau >= this.coast) return;
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
 		
 		this.c6.buy(-1); // autobuy
 		
@@ -926,7 +926,7 @@ class T8 {
 		
 		if (buySkip()) return;
 		
-		if (this.theory.tau >= this.coast) return;
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
 		
 		let minCost = upgradeCost(this.c2).min(upgradeCost(this.c4));
 		
