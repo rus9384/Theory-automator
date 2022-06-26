@@ -1163,7 +1163,7 @@ var tick = (elapsedTime, multiplier) => {
 	
 	timer -= elapsedTime;
 	if (timer <= 0) {
-		mainLabel.text = "" + test;
+		mainLabel.text = "";
 	}
 	
 }
