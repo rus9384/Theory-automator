@@ -1,4 +1,4 @@
-﻿var id = "theory_auto";
+var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
@@ -337,7 +337,7 @@ class T3 {
 	tick(elapsedTime, multiplier) {
 
 		if (!theory.upgrades[this.id].level) return;
-
+		
 		buyMilestones();
 
 		if (enablePublications.level && publicationMultiplier(this.theory) > this.pub) {
@@ -1156,14 +1156,14 @@ var	isCurrencyVisible = index => false;
 var tick = (elapsedTime, multiplier) => {
 
 	if (game.activeTheory === null) return;
-	if (game.activeTheory.id !== theoryManager?.id || theoryManager.pub <= game.activeTheory.tauPublished)
+	if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.upgrades[0].level == 0)
 		refreshTheoryManager();
-	else if (theoryManager.tick(elapsedTime, multiplier))
+	if (theoryManager.tick(elapsedTime, multiplier))
 		switchTheory();
 	
 	timer -= elapsedTime;
 	if (timer <= 0) {
-		mainLabel.text = "";
+		mainLabel.text = "" + test;
 	}
 	
 }
