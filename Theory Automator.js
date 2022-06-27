@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.0c";
+var version = "1.0d";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -756,7 +756,7 @@ class T6 {
 			let k = (this.getMaxC5 * rHalf) / (this.getC1 * this.getC2);
 			let c1WithWeight = upgradeCost(this.c1) * (10 + (this.r1.level % 10)) ** (1 / 1.05);
 			let c2Cost = upgradeCost(this.c2);
-			let c2weight = (c2Cost * 2 ** 0.5 > Math.min(upgradeCost(this.r2), upgradeCost(this.q2))) ? 2 ** 0.5 : 1;
+			let c2weight = (c2Cost * 2 ** 0.5 > upgradeCost(this.r2).min(upgradeCost(this.q2))) ? 2 ** 0.5 : 1;
 			let veryBigNumber = parseBigNumber("ee999999");
 			
 			let costs = [
