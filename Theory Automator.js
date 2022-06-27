@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.0a";
+var version = "1.0b";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -934,7 +934,7 @@ class T8 {
 		
 		this.c4.buy(-1); // autobuy
 		
-		buyMax(this.c3, minCost / 2.5);
+		buyMax(this.c3, minCost / 4);
 		
 		this.c2.buy(-1); // autobuy
 		
