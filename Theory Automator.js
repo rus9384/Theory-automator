@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.0b";
+var version = "1.0c";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -548,8 +548,9 @@ class T5 {
 		let q = this.q;
 		let dqPred = (this.getC1 / vc2 * q * (vc3 - q / vc2)) * multiplier;
 		
-		let qPred = q + Math.max(0, dqPred);
-		qPred = Math.min(qPred, vc2 * vc3);
+		let qPred = q + dqPred.max(0);
+		qPred = qPred.min(vc2 * vc3);
+		
 		return qPred;
 		
 	}
