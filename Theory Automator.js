@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.0d";
+var version = "1.0e";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -12,7 +12,6 @@ var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
 var upgradeCost = upgrade => upgrade.cost.getCost(upgrade.level);
 var toBig = number => BigNumber.from(number);
 var publicationMultiplier = theory => theory.nextPublicationMultiplier / theory.publicationMultiplier;
-var getPrimaryEquation = () => "false";
 
 function buyMax(upgrade, value) {
 	let spend = value.min(upgrade.currency.value);
@@ -1020,7 +1019,7 @@ class UIutils {
 				if (id >= 0 && game.theories[id].tau.log10() < requirements[id]) {
 					variable.level = 0;
 					timer = 5;
-					mainLabel.text = "Theory " + (id + 1) + " requires " + requirements[id] + " $" + game.theories[id].latexSymbol + "$";
+					//mainLabel.text = "Theory " + (id + 1) + " requires " + requirements[id] + " $" + game.theories[id].latexSymbol + "$";
 				}
 				
 				labelRight.text = variable.level == 1 ? "✓" : "✗";
@@ -1138,7 +1137,8 @@ var getUpgradeListDelegate = () => {
 	
 }
 
-var getEquationDelegate = () => {
+// causes a graphical glitch
+/*var getEquationDelegate = () => {
 	
 	mainLabel = ui.createLatexLabel();
 	
@@ -1150,9 +1150,9 @@ var getEquationDelegate = () => {
 	
 	return layout;
 	
-}
+}*/
  
-var	isCurrencyVisible = index => false;
+var isCurrencyVisible = index => false;
 
 var tick = (elapsedTime, multiplier) => {
 
@@ -1162,10 +1162,10 @@ var tick = (elapsedTime, multiplier) => {
 	if (theoryManager.tick(elapsedTime, multiplier))
 		switchTheory();
 	
-	timer -= elapsedTime;
+	/*timer -= elapsedTime;
 	if (timer <= 0) {
 		mainLabel.text = "";
-	}
+	}*/
 	
 }
 
