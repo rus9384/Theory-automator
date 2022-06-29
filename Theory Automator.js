@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1b";
+var version = "1.1c";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1171,10 +1171,7 @@ var getQuaternaryEntries = () => {
 	for (let i = 0; i < 8; i++) {
 		
 		tau = game.theories[i].tauPublished.log10();
-		
-		if (tau < requirements[i] || !theory.upgrades[i].level)
-			continue;
-		
+				
 		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
 		if (tauH > max) {
 			iMax = i;
