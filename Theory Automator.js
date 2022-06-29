@@ -1139,8 +1139,7 @@ var	isCurrencyVisible = index => false;
 
 var getQuaternaryEntries = () => {
 
-	//let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
-	let R9 = (300 / 20) ** 3;
+	let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 	let decay = [
 		30.1935671759384,
 		37.4972532637665,
