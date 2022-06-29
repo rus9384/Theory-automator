@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1";
+var version = "1.1a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1139,11 +1139,12 @@ var	isCurrencyVisible = index => false;
 
 var getQuaternaryEntries = () => {
 
-	let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
+	//let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
+	let R9 = (300 / 20) ** 3;
 	let decay = [
 		30.1935671759384,
 		37.4972532637665,
-		31.8528425141684,
+		30.7608639120181,
 		44.9544911685781,
 		39.2687021300084,
 		102.119195226465,
@@ -1152,14 +1153,14 @@ var getQuaternaryEntries = () => {
 	];
 	let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
 	let base = [
-		3.04,
+		2.59,
 		11.4,
-		1.09,
-		2.67,
-		23.086,
+		1.34,
+		2.85,
+		44.3,
 		4.52,
-		1.85,
-		4.58
+		2.15,
+		4.84
 	];
 		
 	let tau;
@@ -1198,7 +1199,7 @@ var getQuaternaryEntries = () => {
 	
 	// T6 low tau check
 	decay = 70.0732254255212;
-	base = 7.08;
+	base = 8.8;
 	timeMult = 2;
 	
 	tau = game.theories[5].tauPublished.log10();
