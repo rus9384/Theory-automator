@@ -2,16 +2,27 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.0e";
+var version = "1.1";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
 var timer = 0;
 var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
+var test;
 
 var upgradeCost = upgrade => upgrade.cost.getCost(upgrade.level);
 var toBig = number => BigNumber.from(number);
 var publicationMultiplier = theory => theory.nextPublicationMultiplier / theory.publicationMultiplier;
+
+var primaryEquation = "";
+var getPrimaryEquation = () => primaryEquation;
+
+var quaternaryEntries = [];
+{
+	for (let i = 0; i < 8; i++) {
+		quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null))
+	}
+}
 
 function buyMax(upgrade, value) {
 	let spend = value.min(upgrade.currency.value);
@@ -51,42 +62,15 @@ function switchTheory(manualSwitch = false) {
 	
 	if (!enableTheorySwitch.level && !manualSwitch) return;
 	
-	let R9 = game.sigmaTotal ** game.researchUpgrades[8].level;
-	let decay = [
-		30.1935671759384,
-		37.7403626894942,
-		31.8528425141684,
-		44.9544911685781,
-		39.2687021300084,
-		102.119195226465,
-		26.305,
-		17.6476778516314
-	];
-	let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
-	let base = [
-		4.36,
-		11.057,
-		1.338,
-		2.801,
-		23.086,
-		4.053,
-		2.34,
-		4.82
-	];
-		
+	theory.invalidateQuaternaryValues();
+	
 	let iMax = 0;
-	let max = 0;
+	let max  = 0;
 	for (let i = 0; i < 8; i++) {
-		
-		let tau = game.theories[i].tau.log10();
-		
-		if (tau < requirements[i] || !theory.upgrades[i].level)
-			continue;
-		
-		let tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
-		if (tauH > max) {
+		let value = parseFloat(theory.quaternaryValue(i));
+		if (value > max) {
 			iMax = i;
-			max = tauH;
+			max = value;
 		}
 	}
 	
@@ -374,7 +358,7 @@ class T4 {
 	}
 			
 	get getC1() {
-		return Utils.getStepwisePowerSum(this.c1.level, 2, 10, 0).pow(this.theory.milestoneUpgrades[0].level * 0.15 + 1);	
+		return Utils.getStepwisePowerSum(this.c1.level, 2, 10, 0).pow(this.theory.milestoneUpgrades[0].level * 0.05 + 1);	
 	}
 	
 	get q() {
@@ -473,13 +457,13 @@ class T4 {
 		
 		if (this.theory.currencies[0].value == 0)
 			this.c1.buy(1);
-		
+						
 		buyMax(this.c2, this.theory.currencies[0].value * toBig(2).pow(this.c2.level) * this.getC1 / (this.q * toBig(2).pow(this.c3.level)));
 		
 		buyMax(this.c1, upgradeCost(this.c2) / 10);
-		
-		this.c3.buy(-1);
-		
+				
+		buyMax(this.c3, this.theory.currencies[0].value * this.q.max(1) * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1));
+				
 		buyMax(this.q2, upgradeCost(this.c3) / this.q2weight);
 		
 		buyMax(this.q1, upgradeCost(this.c3).min(upgradeCost(this.q2)) / 10);
@@ -549,7 +533,6 @@ class T5 {
 		
 		let qPred = q + dqPred.max(0);
 		qPred = qPred.min(vc2 * vc3);
-		
 		return qPred;
 		
 	}
@@ -1019,7 +1002,8 @@ class UIutils {
 				if (id >= 0 && game.theories[id].tau.log10() < requirements[id]) {
 					variable.level = 0;
 					timer = 5;
-					//mainLabel.text = "Theory " + (id + 1) + " requires " + requirements[id] + " $" + game.theories[id].latexSymbol + "$";
+					primaryEquation = "Theory\\; " + (id + 1) + "\\; requires\\; " + requirements[id] + "\\; " + game.theories[id].latexSymbol;
+					theory.invalidatePrimaryEquation();
 				}
 				
 				labelRight.text = variable.level == 1 ? "✓" : "✗";
@@ -1137,7 +1121,6 @@ var getUpgradeListDelegate = () => {
 	
 }
 
-// causes a graphical glitch
 /*var getEquationDelegate = () => {
 	
 	mainLabel = ui.createLatexLabel();
@@ -1152,7 +1135,84 @@ var getUpgradeListDelegate = () => {
 	
 }*/
  
-var isCurrencyVisible = index => false;
+var	isCurrencyVisible = index => false;
+
+var getQuaternaryEntries = () => {
+
+	let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
+	let decay = [
+		30.1935671759384,
+		37.4972532637665,
+		31.8528425141684,
+		44.9544911685781,
+		39.2687021300084,
+		102.119195226465,
+		26.7695950304505,
+		17.6476778516314
+	];
+	let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
+	let base = [
+		3.04,
+		11.4,
+		1.09,
+		2.67,
+		23.086,
+		4.52,
+		1.85,
+		4.58
+	];
+		
+	let tau;
+	let tauH;	
+		
+	let iMax = 0;
+	let max = 0;
+	for (let i = 0; i < 8; i++) {
+		
+		tau = game.theories[i].tauPublished.log10();
+		
+		if (tau < requirements[i] || !theory.upgrades[i].level)
+			continue;
+		
+		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
+		if (tauH > max) {
+			iMax = i;
+			max = tauH;
+		}	
+		quaternaryEntries[i].value = tauH;
+		
+	}
+	
+	// T4 low tau check
+	decay = 27.0085302950228;
+	base = 1.51;
+	timeMult = 1;
+	
+	tau = game.theories[3].tauPublished.log10();
+	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[3]) / decay);
+	if (tauH > max) {
+		iMax = 3;
+		max = tauH;
+	}
+	quaternaryEntries[3].value = Math.max(tauH, quaternaryEntries[3].value);
+	
+	// T6 low tau check
+	decay = 70.0732254255212;
+	base = 7.08;
+	timeMult = 2;
+	
+	tau = game.theories[5].tauPublished.log10();
+	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[5]) / decay);
+	if (tauH > max) {
+		iMax = 5;
+		max = tauH;
+	}
+	quaternaryEntries[5].value = Math.max(tauH, quaternaryEntries[5].value);
+
+    return quaternaryEntries;
+	
+}
+theory.invalidateQuaternaryValues();
 
 var tick = (elapsedTime, multiplier) => {
 
@@ -1162,10 +1222,11 @@ var tick = (elapsedTime, multiplier) => {
 	if (theoryManager.tick(elapsedTime, multiplier))
 		switchTheory();
 	
-	/*timer -= elapsedTime;
+	timer -= Math.max(0, elapsedTime);
 	if (timer <= 0) {
-		mainLabel.text = "";
-	}*/
+		primaryEquation = "";
+		theory.invalidatePrimaryEquation();
+	}
 	
 }
 
