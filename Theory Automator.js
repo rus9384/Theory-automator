@@ -60,10 +60,10 @@ function buyMilestones() {
 
 function switchTheory(manualSwitch = false) {
 	
-	if (!enableTheorySwitch.level && !manualSwitch) return;
-	
 	theory.invalidateQuaternaryValues();
 	
+	if (!enableTheorySwitch.level && !manualSwitch) return;
+		
 	let iMax = 0;
 	let max  = 0;
 	for (let i = 0; i < 8; i++) {
@@ -81,7 +81,6 @@ function switchTheory(manualSwitch = false) {
 
 function refreshTheoryManager() {
 	
-	theory.invalidateQuaternaryValues();
 	let theoryId = game.activeTheory.id;
 	if (theoryId == 0) theoryManager = new T1;
 	if (theoryId == 1) theoryManager = new T2;
