@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1c";
+var version = "1.1d";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -81,6 +81,7 @@ function switchTheory(manualSwitch = false) {
 
 function refreshTheoryManager() {
 	
+	theory.invalidateQuaternaryValues();
 	let theoryId = game.activeTheory.id;
 	if (theoryId == 0) theoryManager = new T1;
 	if (theoryId == 1) theoryManager = new T2;
