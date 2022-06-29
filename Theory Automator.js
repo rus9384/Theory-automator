@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1a";
+var version = "1.1b";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -67,6 +67,7 @@ function switchTheory(manualSwitch = false) {
 	let iMax = 0;
 	let max  = 0;
 	for (let i = 0; i < 8; i++) {
+		if (!theory.upgrades[i].level) continue;
 		let value = parseFloat(theory.quaternaryValue(i));
 		if (value > max) {
 			iMax = i;
