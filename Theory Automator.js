@@ -76,6 +76,9 @@ function switchTheory(manualSwitch = false) {
 	}
 	
 	game.activeTheory = game.theories[iMax];
+	
+	if (manualSwitch)
+		refreshTheoryManager();
 		
 }
 
@@ -265,10 +268,7 @@ class T3 {
 	buy() {
 		
 		if (buySkip()) return;
-		
-		if (this.theory.currencies[0].value == 0)
-			this.b1.buy(1);
-		
+				
 		this.c23.buy(-1); // autobuy
 		let c23C = upgradeCost(this.c23);
 
@@ -1124,20 +1124,6 @@ var getUpgradeListDelegate = () => {
 	return stack;
 	
 }
-
-/*var getEquationDelegate = () => {
-	
-	mainLabel = ui.createLatexLabel();
-	
-	let layout = ui.createStackLayout({
-		horizontalOptions: LayoutOptions.CENTER,
-		verticalOptions: LayoutOptions.CENTER,
-		children: [mainLabel]
-	})
-	
-	return layout;
-	
-}*/
  
 var	isCurrencyVisible = index => false;
 
