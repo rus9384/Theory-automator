@@ -1203,11 +1203,12 @@ theory.invalidateQuaternaryValues();
 
 var tick = (elapsedTime, multiplier) => {
 
-	if (game.activeTheory === null) return;
-	if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.upgrades[0].level == 0)
-		refreshTheoryManager();
-	if (theoryManager.tick(elapsedTime, multiplier))
-		switchTheory();
+	if (game.activeTheory !== null) {
+		if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
+			refreshTheoryManager();
+		if (theoryManager.tick(elapsedTime, multiplier))
+			switchTheory();
+	}
 	
 	timer -= Math.max(0, elapsedTime);
 	if (timer <= 0) {
