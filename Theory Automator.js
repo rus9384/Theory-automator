@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1d";
+var version = "1.1e";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -135,7 +135,7 @@ class T1 {
 		if (buySkip()) return;
 
 		if (theoryManager.theory.tau >= theoryManager.coast && enablePublications.level) return;
-
+		
 		this.c4.buy(-1); // autobuy	
 
 		buyRatio(this.q2, 1.11);
@@ -265,6 +265,9 @@ class T3 {
 	buy() {
 		
 		if (buySkip()) return;
+		
+		if (this.theory.currencies[0].value == 0)
+			this.b1.buy(1);
 		
 		this.c23.buy(-1); // autobuy
 		let c23C = upgradeCost(this.c23);
@@ -1196,7 +1199,7 @@ var getQuaternaryEntries = () => {
 	
 	// T6 low tau check
 	decay = 70.0732254255212;
-	base = 8.8;
+	base = 7;
 	timeMult = 2;
 	
 	tau = game.theories[5].tauPublished.log10();
