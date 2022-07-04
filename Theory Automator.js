@@ -2,17 +2,18 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.1e";
+var version = "1.2";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
 var timer = 0;
 var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
-var test;
+var R9;
 
 var upgradeCost = upgrade => upgrade.cost.getCost(upgrade.level);
 var toBig = number => BigNumber.from(number);
 var publicationMultiplier = theory => theory.nextPublicationMultiplier / theory.publicationMultiplier;
+var getR9 = () => (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 
 var primaryEquation = "";
 var getPrimaryEquation = () => primaryEquation;
@@ -22,6 +23,12 @@ var quaternaryEntries = [];
 	for (let i = 0; i < 8; i++) {
 		quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null))
 	}
+}
+
+function formatQValue(input) {
+	let string = ("" + input).substring(0, 9);
+	if (string.charAt(8) == '.') string = string.substring(0, 8);
+	return string;
 }
 
 function buyMax(upgrade, value) {
@@ -76,10 +83,7 @@ function switchTheory(manualSwitch = false) {
 	}
 	
 	game.activeTheory = game.theories[iMax];
-	
-	if (manualSwitch)
-		refreshTheoryManager();
-		
+			
 }
 
 function refreshTheoryManager() {
@@ -610,7 +614,7 @@ class T5 {
 		}
 
 		if (!c2worth)
-			this.c1.buy(-1);
+			buyRatio(this.c1, 2);
 
 		buyMax(this.q2, upgradeCost(this.c3));
 
@@ -737,7 +741,7 @@ class T6 {
 		
 		let rHalf = this.r / 2;
 		
-		for (let n = 0; n < 50; n++) { //limited with 50 purchases per tick
+		for (let n = 0; n < 50; n++) { // limited with 50 purchases per tick
 			
 			let k = (this.getMaxC5 * rHalf) / (this.getC1 * this.getC2);
 			let c1WithWeight = upgradeCost(this.c1) * (10 + (this.r1.level % 10)) ** (1 / 1.05);
@@ -746,9 +750,9 @@ class T6 {
 			let veryBigNumber = parseBigNumber("ee999999");
 			
 			let costs = [
-				upgradeCost(this.q1) * (3.5 + (this.q1.level % 10) ** 0.6),
+				upgradeCost(this.q1) * (9 + (this.q1.level % 10)) ** (1 / 1.15),
 				upgradeCost(this.q2),
-				upgradeCost(this.r1) * (5 + (this.r1.level % 10)) ** (1 / 1.1),
+				upgradeCost(this.r1) * (5 + (this.r1.level % 10)) ** 0.8,
 				upgradeCost(this.r2),
 				c1WithWeight < c2Cost ? c1WithWeight : veryBigNumber,
 				c2Cost * k.max(1) * c2weight,
@@ -1024,20 +1028,38 @@ class UIutils {
 	
 	static createTheorySwitchButton() {
 		
-		let label = ui.createLatexLabel({
+		let labelLeft = ui.createLatexLabel({
 			text: "Switch the theory now",
 			horizontalTextAlignment: TextAlignment.START,
 			verticalTextAlignment: TextAlignment.CENTER,
 			textColor: Color.TEXT
 		});
 		
+		let labelRight = ui.createLabel({
+			horizontalTextAlignment: TextAlignment.CENTER,
+			verticalTextAlignment: TextAlignment.START,
+			textColor: Color.TEXT,
+			fontSize: 28
+		});
+		
+		let frameRight = ui.createFrame({
+			padding: Thickness(0, 0, 0, 5),
+			verticalOptions: LayoutOptions.CENTER,
+			content: labelRight,
+			borderColor: Color.TRANSPARENT,
+			column: 1
+		});
+		
+		let grid = ui.createGrid({
+			columnDefinitions: ["1*", 25],
+			children: [labelLeft, frameRight]
+		});
+		
 		let buttonFrame = ui.createFrame({
 			padding: Thickness(10, 2, 10, 2),
 			verticalOptions: LayoutOptions.CENTER,
-			content: label,
-			borderColor: Color.MINIGAME_TILE_BORDER,
-			heightRequest: 50,
-			minimumHeightRequest: 50
+			content: grid,
+			borderColor: Color.MINIGAME_TILE_BORDER
 		});
 		
 		buttonFrame.onTouched = (touchEvent) => {
@@ -1059,7 +1081,7 @@ class UIutils {
 var getUpgradeListDelegate = () => {
 		
 	let performTheorySwitchButton = UIutils.createTheorySwitchButton();
-		
+			
 	let enableVariablePurchaseButton = UIutils.createLatexButton("Variable purchase", enableVariablePurchase);
 	enableVariablePurchaseButton.row = 0;
 	enableVariablePurchaseButton.column = 0;
@@ -1077,9 +1099,7 @@ var getUpgradeListDelegate = () => {
 	enableTheorySwitchButton.column = 1;
 
     let topGrid = ui.createGrid({
-        columnDefinitions: ["1*", "1*"],
 		columnSpacing: 3,
-		rowDefinitions: [60, 60],
 		rowSpacing: 3,
 		children: [
 			enableVariablePurchaseButton, 
@@ -1098,9 +1118,7 @@ var getUpgradeListDelegate = () => {
 	}
 	
     let bottomGrid = ui.createGrid({
-        columnDefinitions: ["1*", "1*"],
 		columnSpacing: 3,
-		rowDefinitions: [60, 60, 60, 60],
 		rowSpacing: 3,
 		children: buttonArray
     });
@@ -1129,7 +1147,6 @@ var	isCurrencyVisible = index => false;
 
 var getQuaternaryEntries = () => {
 
-	let R9 = (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 	let decay = [
 		30.1935671759384,
 		37.4972532637665,
@@ -1166,7 +1183,7 @@ var getQuaternaryEntries = () => {
 			iMax = i;
 			max = tauH;
 		}	
-		quaternaryEntries[i].value = tauH;
+		quaternaryEntries[i].value = formatQValue(tauH);
 		
 	}
 	
@@ -1181,7 +1198,7 @@ var getQuaternaryEntries = () => {
 		iMax = 3;
 		max = tauH;
 	}
-	quaternaryEntries[3].value = Math.max(tauH, quaternaryEntries[3].value);
+	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
 	
 	// T6 low tau check
 	decay = 70.0732254255212;
@@ -1194,12 +1211,11 @@ var getQuaternaryEntries = () => {
 		iMax = 5;
 		max = tauH;
 	}
-	quaternaryEntries[5].value = Math.max(tauH, quaternaryEntries[5].value);
+	quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
 
     return quaternaryEntries;
 	
 }
-theory.invalidateQuaternaryValues();
 
 var tick = (elapsedTime, multiplier) => {
 
@@ -1210,10 +1226,18 @@ var tick = (elapsedTime, multiplier) => {
 			switchTheory();
 	}
 	
-	timer -= Math.max(0, elapsedTime);
-	if (timer <= 0) {
-		primaryEquation = "";
-		theory.invalidatePrimaryEquation();
+	if (timer > 0) {
+		timer -= Math.max(0, elapsedTime);
+		if (timer <= 0) {
+			primaryEquation = "";
+			theory.invalidatePrimaryEquation();
+		}
+	}
+	
+	let newR9 = getR9();
+	if (R9 !== newR9) {
+		R9 = newR9;
+		theory.invalidateQuaternaryValues();
 	}
 	
 }
@@ -1223,6 +1247,7 @@ var tick = (elapsedTime, multiplier) => {
 	
 	fictitiousCurrency = theory.createCurrency();
 	
+	// Theory on/off upgrades
 	for (let i = 0; i < 8; i++)
 		theory.createUpgrade(i, fictitiousCurrency, new FreeCost);
 	
