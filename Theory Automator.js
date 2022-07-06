@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.3";
+var version = "1.3a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1101,6 +1101,11 @@ class UIutils {
 var getUpgradeListDelegate = () => {
 		
 	let performTheorySwitchButton = UIutils.createTheorySwitchButton();
+	
+	let performTheorySwitchGrid = ui.createGrid({
+		rowDefinitions: [60],
+		children: [performTheorySwitchButton]
+	})
 			
 	let enableVariablePurchaseButton = UIutils.createLatexButton("Variable purchase", enableVariablePurchase);
 	enableVariablePurchaseButton.row = 0;
@@ -1121,6 +1126,7 @@ var getUpgradeListDelegate = () => {
     let topGrid = ui.createGrid({
 		columnSpacing: 3,
 		rowSpacing: 3,
+		rowDefinitions: [60, 60],
 		children: [
 			enableVariablePurchaseButton, 
 			enableMSPurchaseButton, 
@@ -1148,14 +1154,14 @@ var getUpgradeListDelegate = () => {
 	})
 	
 	let separator = ui.createBox({
-		heightRequest: 2
+		heightRequest: 1
 	});
 	
     let stack = ui.createStackLayout({
 		padding: Thickness(0, 3, 0, 0),
 		spacing: 3,
         children: [
-			performTheorySwitchButton, topGrid, separator, scrollView
+			performTheorySwitchGrid, topGrid, separator, scrollView
         ]
     });    
 		
