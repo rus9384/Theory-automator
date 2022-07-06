@@ -2,13 +2,14 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.2";
+var version = "1.3";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
 var timer = 0;
 var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
 var R9;
+var test;
 
 var upgradeCost = upgrade => upgrade.cost.getCost(upgrade.level);
 var toBig = number => BigNumber.from(number);
@@ -16,7 +17,23 @@ var publicationMultiplier = theory => theory.nextPublicationMultiplier / theory.
 var getR9 = () => (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 
 var primaryEquation = "";
-var getPrimaryEquation = () => primaryEquation;
+function getPrimaryEquation() {
+	
+	if (primaryEquation != "") return primaryEquation;
+	
+	let coastText = "\\begin{eqnarray}";
+	if (theoryManager.id != 1 && theoryManager.id != 2)
+		coastText += "Coast\\;" + theoryManager.theory.latexSymbol + "&=&" + theoryManager.coast + "\\\\";
+	
+	let pubTau = theoryManager.pub;
+	if (theoryManager.id == 1)
+		pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.198);
+	else if (theoryManager.id == 2)
+		pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.147);
+	
+	return coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\end{eqnarray}";
+	
+}
 
 var quaternaryEntries = [];
 {
@@ -71,7 +88,7 @@ function switchTheory(manualSwitch = false) {
 	
 	if (!enableTheorySwitch.level && !manualSwitch) return;
 		
-	let iMax = 0;
+	let iMax = -1;
 	let max  = 0;
 	for (let i = 0; i < 8; i++) {
 		if (!theory.upgrades[i].level) continue;
@@ -82,8 +99,9 @@ function switchTheory(manualSwitch = false) {
 		}
 	}
 	
-	game.activeTheory = game.theories[iMax];
-			
+	if (iMax >= 0)
+		game.activeTheory = game.theories[iMax];
+				
 }
 
 function refreshTheoryManager() {
@@ -97,6 +115,8 @@ function refreshTheoryManager() {
 	if (theoryId == 5) theoryManager = new T6;
 	if (theoryId == 6) theoryManager = new T7;
 	if (theoryId == 7) theoryManager = new T8;
+	
+	theory.invalidatePrimaryEquation();
 		
 }
 
@@ -744,7 +764,7 @@ class T6 {
 		for (let n = 0; n < 50; n++) { // limited with 50 purchases per tick
 			
 			let k = (this.getMaxC5 * rHalf) / (this.getC1 * this.getC2);
-			let c1WithWeight = upgradeCost(this.c1) * (10 + (this.r1.level % 10)) ** (1 / 1.05);
+			let c1WithWeight = upgradeCost(this.c1) * (10 + (this.c1.level % 10)) ** (1 / 1.05);
 			let c2Cost = upgradeCost(this.c2);
 			let c2weight = (c2Cost * 2 ** 0.5 > upgradeCost(this.r2).min(upgradeCost(this.q2))) ? 2 ** 0.5 : 1;
 			let veryBigNumber = parseBigNumber("ee999999");
@@ -1172,17 +1192,10 @@ var getQuaternaryEntries = () => {
 	let tau;
 	let tauH;	
 		
-	let iMax = 0;
-	let max = 0;
 	for (let i = 0; i < 8; i++) {
 		
 		tau = game.theories[i].tauPublished.log10();
-				
 		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
-		if (tauH > max) {
-			iMax = i;
-			max = tauH;
-		}	
 		quaternaryEntries[i].value = formatQValue(tauH);
 		
 	}
@@ -1194,10 +1207,6 @@ var getQuaternaryEntries = () => {
 	
 	tau = game.theories[3].tauPublished.log10();
 	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[3]) / decay);
-	if (tauH > max) {
-		iMax = 3;
-		max = tauH;
-	}
 	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
 	
 	// T6 low tau check
@@ -1207,10 +1216,6 @@ var getQuaternaryEntries = () => {
 	
 	tau = game.theories[5].tauPublished.log10();
 	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[5]) / decay);
-	if (tauH > max) {
-		iMax = 5;
-		max = tauH;
-	}
 	quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
 
     return quaternaryEntries;
