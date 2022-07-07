@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.3a";
+var version = "1.3b";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -418,7 +418,7 @@ class T4 {
 		let threshold = this.q2weight * toBig(1000 / 2.468 ** 8);
 		let c3Near;
 		let c3Last = this.c3Cost(lastPub);
-		if (lastPub / c3Last > this.q2weight)
+		if (lastPub / c3Last > 5)
 		  c3Last *= 2.468;
 		let c3Amount;
 		
@@ -468,8 +468,8 @@ class T4 {
 			this.pub *= 2.468 ** 38;
 		}
 
-		if (this.pub < lastPub) { // in case the calculation goes wrong
-		  this.pub = lastPub * 1000;
+		if (this.pub < lastPub * 10) { // in case the calculation goes wrong
+		  this.pub = lastPub * 80;
 		}
 		this.pub *= 1.3;
 
@@ -1146,6 +1146,7 @@ var getUpgradeListDelegate = () => {
     let bottomGrid = ui.createGrid({
 		columnSpacing: 3,
 		rowSpacing: 3,
+		rowDefinitions: [60, 60, 60, 60],
 		children: buttonArray
     });
 	
