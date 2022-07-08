@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.3b";
+var version = "1.3c";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -32,7 +32,7 @@ function getPrimaryEquation() {
 		pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.147);
 	
 	return coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\end{eqnarray}";
-	
+		
 }
 
 var quaternaryEntries = [];
@@ -701,8 +701,21 @@ class T6 {
 		return toBig(2).pow(this.c2.level);
 	}
 		
+	get maxRho() {
+		let max = toBig(0);
+		for (let i = 0; i < this.upgrades.length; i++) {
+			let upgrade = this.upgrades[i];
+			if (upgrade.level) {
+				let cost = upgrade.cost.getCost(upgrade.level - 1);
+				max = max.max(cost);
+			}
+		}
+		max = max.max(this.theory.currencies[0].value);
+		return max;
+	}
+	
 	get getMaxC5() {
-		let rho = this.theory.currencies[0].value;
+		let rho = this.maxRho;
 		if (rho < 15)
 			return 0;
 		return toBig(2).pow((rho / 15).log2() / Math.log2(3.9));
@@ -1102,8 +1115,10 @@ var getUpgradeListDelegate = () => {
 		
 	let performTheorySwitchButton = UIutils.createTheorySwitchButton();
 	
+	let height = ui.screenHeight * 0.055;
+		
 	let performTheorySwitchGrid = ui.createGrid({
-		rowDefinitions: [60],
+		rowDefinitions: [height],
 		children: [performTheorySwitchButton]
 	})
 			
@@ -1126,7 +1141,7 @@ var getUpgradeListDelegate = () => {
     let topGrid = ui.createGrid({
 		columnSpacing: 3,
 		rowSpacing: 3,
-		rowDefinitions: [60, 60],
+		rowDefinitions: [height, height],
 		children: [
 			enableVariablePurchaseButton, 
 			enableMSPurchaseButton, 
@@ -1146,7 +1161,7 @@ var getUpgradeListDelegate = () => {
     let bottomGrid = ui.createGrid({
 		columnSpacing: 3,
 		rowSpacing: 3,
-		rowDefinitions: [60, 60, 60, 60],
+		rowDefinitions: [height, height, height, height],
 		children: buttonArray
     });
 	
@@ -1165,7 +1180,7 @@ var getUpgradeListDelegate = () => {
 			performTheorySwitchGrid, topGrid, separator, scrollView
         ]
     });    
-		
+			
 	return stack;
 	
 }
