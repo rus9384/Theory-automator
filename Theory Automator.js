@@ -386,7 +386,7 @@ class T2 {
 
 		if (this.scheduledUpgrades.length >= 5) return false;
 		
-		if (this.phase == 5) return false;
+		if (this.phase == 5) return true;
 		
 		this.scheduledLevels = [0, 0, 0, 0, 0, 0, 0, 0];
 
