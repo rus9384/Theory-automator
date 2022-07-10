@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.3c";
+var version = "1.4";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -24,6 +24,8 @@ function getPrimaryEquation() {
 	let coastText = "\\begin{eqnarray}";
 	if (theoryManager.id != 1 && theoryManager.id != 2)
 		coastText += "Coast\\;" + theoryManager.theory.latexSymbol + "&=&" + theoryManager.coast + "\\\\";
+	else
+		coastText += "Phase&=&" + theoryManager.phase + "\\\\";
 	
 	let pubTau = theoryManager.pub;
 	if (theoryManager.id == 1)
@@ -32,14 +34,73 @@ function getPrimaryEquation() {
 		pubTau = theoryManager.theory.tauPublished * theoryManager.pub ** (1 / 0.147);
 	
 	return coastText + "Next\\;\\overline{" + theoryManager.theory.latexSymbol + "}&=&" + pubTau + "\\end{eqnarray}";
-		
+				
 }
+
+var secondaryEquation = "";
+var getSecondaryEquation = () => "" + secondaryEquation;
 
 var quaternaryEntries = [];
 {
 	for (let i = 0; i < 8; i++) {
 		quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null))
 	}
+}
+var getQuaternaryEntries = () => {
+
+	let decay = [
+		30.1935671759384,
+		37.4972532637665,
+		30.7608639120181,
+		44.9544911685781,
+		39.2687021300084,
+		102.119195226465,
+		26.7695950304505,
+		17.6476778516314
+	];
+	let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
+	let base = [
+		2.59,
+		11.4,
+		1.36,
+		2.85,
+		44.3,
+		4.52,
+		2.15,
+		4.93
+	];
+		
+	let tau;
+	let tauH;	
+		
+	for (let i = 0; i < 8; i++) {
+		
+		tau = game.theories[i].tauPublished.log10();
+		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
+		quaternaryEntries[i].value = formatQValue(tauH);
+		
+	}
+	
+	// T4 low tau check
+	decay = 27.0085302950228;
+	base = 1.51;
+	timeMult = 1;
+	
+	tau = game.theories[3].tauPublished.log10();
+	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[3]) / decay);
+	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
+	
+	// T6 low tau check
+	decay = 70.0732254255212;
+	base = 7;
+	timeMult = 2;
+	
+	tau = game.theories[5].tauPublished.log10();
+	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[5]) / decay);
+	quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
+
+    return quaternaryEntries;
+	
 }
 
 function formatQValue(input) {
@@ -50,12 +111,14 @@ function formatQValue(input) {
 
 function buyMax(upgrade, value) {
 	let spend = value.min(upgrade.currency.value);
+	let levelBefore = upgrade.level;
 	upgrade.buy(upgrade.cost.getMax(upgrade.level, spend));
+	return upgrade.level > levelBefore;
 }
 
 function buyRatio(upgrade, ratio) {
 	let BigNumRatio = typeof(ratio) === 'object' ? ratio : toBig(ratio);
-	buyMax(upgrade, upgrade.currency.value / BigNumRatio);
+	return buyMax(upgrade, upgrade.currency.value / BigNumRatio);
 }
 
 function buySkip() {
@@ -87,7 +150,7 @@ function switchTheory(manualSwitch = false) {
 	theory.invalidateQuaternaryValues();
 	
 	if (!enableTheorySwitch.level && !manualSwitch) return;
-		
+
 	let iMax = -1;
 	let max  = 0;
 	for (let i = 0; i < 8; i++) {
@@ -98,10 +161,10 @@ function switchTheory(manualSwitch = false) {
 			max = value;
 		}
 	}
-	
+
 	if (iMax >= 0)
 		game.activeTheory = game.theories[iMax];
-				
+
 }
 
 function refreshTheoryManager() {
@@ -117,7 +180,10 @@ function refreshTheoryManager() {
 	if (theoryId == 7) theoryManager = new T8;
 	
 	theory.invalidatePrimaryEquation();
-		
+
+	secondaryEquation = "";
+	theory.invalidateSecondaryEquation();
+
 }
 
 // Utilizes T1SolarXLII strategy with cyclic publication multipliers
@@ -133,11 +199,16 @@ class T1 {
 		this.q2 = this.upgrades[1];
 		this.c3 = this.upgrades[4];
 		this.c4 = this.upgrades[5];
-			
+
 		this.lastPub = this.theory.tauPublished;
-				
-		this.setPub();		
-						
+
+		this.setPub();	
+
+		this.scheduledUpgrades = [];
+		this.scheduledLevels   = [0, 0, 0, 0];
+
+		theory.secondaryEquationHeight = 20;
+
 	}
 
 	get c4NC() {
@@ -157,32 +228,113 @@ class T1 {
 		
 	}	
 
+	updateSchedule() {
+
+		if (this.scheduledUpgrades.length >= 25) return false;
+
+		let ratios = [5, 1.11, 5, 1];
+
+		while (this.scheduledUpgrades.length < 25) {
+
+			let costs = [
+				this.q1.cost.getCost(this.q1.level + this.scheduledLevels[0]) * (6.9 + (this.q1.level + this.scheduledLevels[0]) % 10),
+				this.q2.cost.getCost(this.q2.level + this.scheduledLevels[1]),
+				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * 5,
+				this.c4.cost.getCost(this.c4.level + this.scheduledLevels[3])
+			];
+			let minCost = [parseBigNumber("ee999999"), null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels[minCost[1]]);
+			if (cost * ratios[minCost[1]] >= this.coast)
+				break;
+			if (minCost[1] != null) {
+				this.scheduledLevels[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades[this.scheduledUpgrades.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades.push([minCost[1], 1]);
+			}
+			else break;
+
+		}	
+
+		return true;
+
+	}
+	
+	showSchedule() {
+		secondaryEquation = "";
+		if (this.scheduledUpgrades.length)
+			secondaryEquation = "Next\\ upgrades: ";
+		for (let i = 0; i < Math.min(this.scheduledUpgrades.length, 5); i++){
+			if (this.scheduledUpgrades[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades[i][1];
+			secondaryEquation += (this.scheduledUpgrades[i][0] < 2 ? "q" + (this.scheduledUpgrades[i][0] + 1) : "c" + (this.scheduledUpgrades[i][0] + 1));
+			if (i + 1 < Math.min(this.scheduledUpgrades.length, 5))
+				secondaryEquation += ", ";
+		}
+		theory.invalidateSecondaryEquation();		
+	}
+	
 	buy() {
 		
 		if (buySkip()) return;
 
 		if (theoryManager.theory.tau >= theoryManager.coast && enablePublications.level) return;
 		
-		this.c4.buy(-1); // autobuy	
+		let schedulerRefresh = false;
+		if (buyRatio(this.q1, 50)) schedulerRefresh = true;
+		if (buyRatio(this.q2,  2)) schedulerRefresh = true;
+		if (buyRatio(this.c3, 10)) schedulerRefresh = true;
+		if (buyRatio(this.c4,  2)) schedulerRefresh = true;
 
-		buyRatio(this.q2, 1.11);
+		if (schedulerRefresh) {
+			this.scheduledUpgrades = [];
+			this.scheduledLevels   = [0, 0, 0, 0];
+		}
 
-		buyRatio(this.c3, 5);
+		while (this.scheduledUpgrades.length) {
 
-		buyRatio(this.q1, 24);		
-
-		while (true) {
-			let q1Cost = upgradeCost(this.q1);
-			let q1weight = this.q1.level % 10;
-			if (
-				q1Cost * 5 > this.q1.currency.value ||
-				q1Cost * (6  + q1weight) > upgradeCost(this.q2) ||
-				q1Cost * (15 + q1weight) > upgradeCost(this.c4)
-			) {
-				break;
+			let upgradeIndex = this.scheduledUpgrades[0][0];
+			let upgrade;
+			let ratio;
+			switch (upgradeIndex) {
+				case 0:
+					upgrade = this.q1;
+					ratio 	= 5;
+					break;
+				case 1:
+					upgrade = this.q2;
+					ratio 	= 1.11;
+					break;
+				case 2:
+					upgrade = this.c3;
+					ratio 	= 5;
+					break;
+				case 3:
+					upgrade = this.c4;
+					ratio 	= 1;
+					break;
 			}
-			this.q1.buy(1);
-		}			
+
+			let levelBefore = upgrade.level;
+			buyRatio(upgrade, ratio);
+
+			if (levelBefore == upgrade.level)
+				break;
+
+			this.scheduledUpgrades[0][1]--; 
+			this.scheduledLevels[upgradeIndex]--;
+			if (this.scheduledUpgrades[0][1] <= 0)
+				this.scheduledUpgrades.shift();
+
+		}
+
+		if (this.updateSchedule()) this.showSchedule();
+
 	}
 
 	tick(elapsedTime, multiplier) {
@@ -190,7 +342,7 @@ class T1 {
 		if (!theory.upgrades[this.id].level) return;
 
 		buyMilestones();
-							
+
 		if (enablePublications.level && this.theory.tau > this.pub) {
 			game.activeTheory.publish();
 			return true;
@@ -199,7 +351,7 @@ class T1 {
 		this.buy();
 
 		return false;
-		
+
 	}
 
 }
@@ -208,37 +360,126 @@ class T1 {
 class T2 {
 	
 	constructor() {
-		
+
 		this.id = 1;
 		this.theory = game.activeTheory;
-		
+
 		this.upgrades = this.theory.upgrades;
-		
+
 		this.pub = 8000;
 		this.qr1 = 4650;
 		this.qr2 = 2900;
 		this.qr3 = 2250;
 		this.qr4 = 1150;
-		
+		this.phase = 1;
+
+		this.scheduledUpgrades = [];
+		this.scheduledLevels;
+
+		theory.secondaryEquationHeight = 20;
+
 	}
+
+	updateSchedule() {
+
+		let veryBigNumber = parseBigNumber("ee999999");
+
+		if (this.scheduledUpgrades.length >= 5) return false;
+		
+		if (this.phase == 5) return false;
+		
+		this.scheduledLevels = [0, 0, 0, 0, 0, 0, 0, 0];
+
+		while (this.scheduledUpgrades.length < 5) {
+
+			let costs = [];
+			for (let i = 0; i < 8; i++)
+				costs.push(this.upgrades[i].cost.getCost(this.upgrades[i].level + this.scheduledLevels[i]));
 			
+			if (this.phase > 1) {
+				costs[3] = veryBigNumber;
+				costs[7] = veryBigNumber;
+			}
+			
+			if (this.phase > 2) {
+				costs[2] = veryBigNumber;
+				costs[6] = veryBigNumber;
+			}
+			
+			if (this.phase > 3) {
+				costs[1] = veryBigNumber;
+				costs[5] = veryBigNumber;
+			}
+
+			let minCost = [veryBigNumber, null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels[minCost[1]]);
+			if (cost >= this.coast)
+				break;
+			if (minCost[1] != null) {
+				this.scheduledLevels[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades[this.scheduledUpgrades.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades.push([minCost[1], 1]);
+			}
+			else break;
+
+		}	
+
+		return true;
+
+	}
+	
+	showSchedule() {
+		secondaryEquation = "";
+		if (this.scheduledUpgrades.length)
+			secondaryEquation = "Next\\ upgrades: ";
+		for (let i = 0; i < Math.min(this.scheduledUpgrades.length, 5); i++){
+			if (this.scheduledUpgrades[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades[i][1];
+			secondaryEquation += this.scheduledUpgrades[i][0] <= 3 ? "q" + (this.scheduledUpgrades[i][0] + 1) : "r" + (this.scheduledUpgrades[i][0] - 3);
+			if (i + 1 < Math.min(this.scheduledUpgrades.length, 5))
+				secondaryEquation += ", ";
+		}
+		theory.invalidateSecondaryEquation();		
+	}
+	
+
 	buy() {
 		
 		if (buySkip()) return;
-		
-		if (publicationMultiplier(this.theory) >= this.qr1 && enablePublications.level) return;
+
+		if (this.updateSchedule()) this.showSchedule();
+
+		if (publicationMultiplier(this.theory) >= this.qr1 && enablePublications.level) {
+			this.phase = 5;
+			return;
+		}
 		this.upgrades[0].buy(-1);
 		this.upgrades[4].buy(-1);
 		
-		if (publicationMultiplier(this.theory) >= this.qr2 && enablePublications.level) return;
+		if (publicationMultiplier(this.theory) >= this.qr2 && enablePublications.level) {
+			this.phase = 4;
+			return;
+		}
 		this.upgrades[1].buy(-1);
 		this.upgrades[5].buy(-1);
 
-		if (publicationMultiplier(this.theory) >= this.qr3 && enablePublications.level) return;
+		if (publicationMultiplier(this.theory) >= this.qr3 && enablePublications.level) {
+			this.phase = 3;
+			return;
+		}
 		this.upgrades[2].buy(-1);
 		this.upgrades[6].buy(-1);
 		
-		if (publicationMultiplier(this.theory) >= this.qr4 && enablePublications.level) return;
+		if (publicationMultiplier(this.theory) >= this.qr4 && enablePublications.level) {
+			this.phase = 2;
+			return;
+		}
 		this.upgrades[3].buy(-1);
 		this.upgrades[7].buy(-1);		
 				
@@ -285,63 +526,315 @@ class T3 {
 		this.phase1 = this.theory.tauPublished / 10;
 		this.phase2 = 1.2;
 		this.phase3 = 2.2;				
-		this.pub 	= 2.5;	
+		this.pub 	= 2.5;
+		this.phase  = 1;
 		
+		this.scheduledUpgrades1 = [];
+		this.scheduledUpgrades2 = [];
+		this.scheduledUpgrades3 = [];
+		this.scheduledLevels1   = [0, 0];
+		this.scheduledLevels2   = [0, 0, 0, 0];
+		this.scheduledLevels3   = [0, 0, 0];
+				
+	}
+	
+	updateSchedule1() {
+		
+		if (this.scheduledUpgrades1.length >= 15) return false;
+		
+		while (this.scheduledUpgrades1.length < 15) {
+			
+			let costs = [
+				this.b1.cost.getCost(this.b1.level + this.scheduledLevels1[0]) * 8,
+				this.c31.cost.getCost(this.c31.level + this.scheduledLevels1[1])
+			];
+
+			let minCost = [parseBigNumber("ee999999"), null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			if (minCost == null) break;
+			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels1[minCost[1]]);
+			if (cost >= this.theory.tauPublished / 3.8)
+				break;
+			this.scheduledLevels1[minCost[1]]++;
+			let lastUpgrade = this.scheduledUpgrades1[this.scheduledUpgrades1.length - 1];
+			if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1])
+				lastUpgrade[1]++;
+			else
+				this.scheduledUpgrades1.push([minCost[1], 1]);
+			
+		}
+		
+		return true;
+
+	}
+	
+	updateSchedule2() {
+		
+		if (this.scheduledUpgrades2.length >= 15) return false;
+		
+		let veryBigNumber = parseBigNumber("ee999999");
+				
+		while (this.scheduledUpgrades2.length < 15) {
+			
+			let costs;
+			if (this.phase <= 2)
+				costs = [
+					this.b2.cost.getCost(this.b2.level + this.scheduledLevels2[0]) * 5,
+					this.c12.cost.getCost(this.c12.level + this.scheduledLevels2[1]) * 100,
+					this.c22.cost.getCost(this.c22.level + this.scheduledLevels2[2]) * 2.5,
+					this.c32.cost.getCost(this.c32.level + this.scheduledLevels2[3])
+				];
+			else if (this.phase == 3)
+				costs = [
+					this.b2.cost.getCost(this.b2.level + this.scheduledLevels2[0]) * 8,
+					this.c12.cost.getCost(this.c12.level + this.scheduledLevels2[1]),
+					this.c22.cost.getCost(this.c22.level + this.scheduledLevels2[2]) * 8,
+					this.c32.cost.getCost(this.c32.level + this.scheduledLevels2[3]) * 8
+				];
+			else
+				costs = [
+					this.b2.cost.getCost(this.b2.level + this.scheduledLevels2[0]),
+					this.c12.cost.getCost(this.c12.level + this.scheduledLevels2[1]),
+					veryBigNumber, // does not buy c22 after 2.2 multiplier
+					veryBigNumber  // does not buy c32 after 2.2 multiplier
+				];				
+			let minCost = [veryBigNumber, null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			if (minCost[1] != null) {
+				this.scheduledLevels2[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades2[this.scheduledUpgrades2.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades2.push([minCost[1], 1]);
+			}
+			else break;
+
+		}
+		
+		return true;
+
+	}
+
+	updateSchedule3() {
+		
+		if (this.scheduledUpgrades3.length >= 15) return false;
+		
+		let veryBigNumber = parseBigNumber("ee999999");
+		
+		while (this.scheduledUpgrades3.length < 15) {
+			
+			let costs = [
+					this.b3.cost.getCost(this.b3.level + this.scheduledLevels3[0]) * (this.phase == 4 ? 1 : 8),
+					this.c23.cost.getCost(this.c23.level + this.scheduledLevels3[1]),
+					this.phase <= 2 ? this.c33.cost.getCost(this.c33.level + this.scheduledLevels3[2]) * 10 : veryBigNumber
+				];			
+			let minCost = [veryBigNumber, null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			if (minCost[1] != null) {
+				this.scheduledLevels3[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades3[this.scheduledUpgrades3.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades3.push([minCost[1], 1]);
+			}
+			else break;
+
+		}
+		
+		return true;
+
+	}
+
+	showSchedule() {
+		let height = 15;
+		secondaryEquation = "";
+		if (this.scheduledUpgrades1.length) {
+			secondaryEquation += "Next\\ \\rho_1\\ upgrades: ";
+			height += 12;
+		}
+		for (let i = 0; i < Math.min(this.scheduledUpgrades1.length, 5); i++){
+			if (this.scheduledUpgrades1[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades1[i][1];
+			secondaryEquation += this.scheduledUpgrades1[i][0] == 0 ? "b1" : "c31";
+			if (i + 1 < Math.min(this.scheduledUpgrades1.length, 5))
+				secondaryEquation += ", ";
+		}
+		if (this.scheduledUpgrades1.length)
+			secondaryEquation += "\\\\";
+		if (this.scheduledUpgrades2.length) {
+			secondaryEquation += "Next\\ \\rho_2\\ upgrades: ";
+			height += 12;
+		}
+		for (let i = 0; i < Math.min(this.scheduledUpgrades2.length, 5); i++){
+			if (this.scheduledUpgrades2[i][1] > 1) 
+				secondaryEquation += this.scheduledUpgrades2[i][1];
+			secondaryEquation += this.scheduledUpgrades2[i][0] == 0 ? "b2" : "c" + this.scheduledUpgrades2[i][0] + "2";
+			if (i + 1 < Math.min(this.scheduledUpgrades2.length, 5))
+				secondaryEquation += ", ";
+		}
+		if (this.scheduledUpgrades2.length)
+			secondaryEquation += "\\\\";
+		if (this.scheduledUpgrades3.length) {
+			secondaryEquation += "Next\\ \\rho_3\\ upgrades: ";
+			height += 12;
+		}
+		for (let i = 0; i < Math.min(this.scheduledUpgrades3.length, 5); i++){
+			if (this.scheduledUpgrades3[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades3[i][1];
+			secondaryEquation += this.scheduledUpgrades3[i][0] == 0 ? "b3" : "c" + (this.scheduledUpgrades3[i][0] + 1) + "3";
+			if (i + 1 < Math.min(this.scheduledUpgrades3.length, 5))
+				secondaryEquation += ", ";
+		}
+		theory.secondaryEquationHeight = height;
+		theory.invalidateSecondaryEquation();
 	}
 
 	buy() {
-		
+
 		if (buySkip()) return;
-				
-		this.c23.buy(-1); // autobuy
-		let c23C = upgradeCost(this.c23);
 
-		if (publicationMultiplier(this.theory) < this.phase2) {
-						
-			this.c32.buy(-1); // autobuy
-			let c32C = upgradeCost(this.c32);
-						
-			buyMax(this.b2,  c32C /   5);
-			
-			buyMax(this.b3,  c23C /   8);
+		let schedulerRefresh1 = false;
+		let schedulerRefresh2 = false;
+		let schedulerRefresh3 = false;
 
-			buyMax(this.c12, c32C / 100);
-			
-			buyMax(this.c22, c32C / 2.5);
-			
-			buyMax(this.c33, c23C /  10);
-
-			if (this.theory.currencies[0].value < this.phase1) {
-				
-				this.c31.buy(-1);
-				
-				buyMax(this.b1, upgradeCost(this.c31) / 8);
-				
-			}
-		} else {
-			
-			this.c12.buy(-1); // autobuy
-			let c12Ratio = upgradeCost(this.c12) / 8;
-			
-			if (publicationMultiplier(this.theory) < this.phase3) {
-				
-				buyMax(this.b2,  c12Ratio);
-	
-				buyMax(this.b3,  c23C / 8);
-				
-				buyMax(this.c22, c12Ratio);
-				
-				buyMax(this.c32, c12Ratio);
-				
-			} else {
-				
-				this.b2.buy(-1) // autobuy
-				
-				this.b3.buy(-1) // autobuy
-				
-			}
-			
+		if (buyRatio(this.b1 , 100000)) schedulerRefresh1 = true;
+		if (buyRatio(this.c31,  10000)) schedulerRefresh1 = true;
+		if (buyRatio(this.b2 ,     10)) schedulerRefresh2 = true;
+		if (buyRatio(this.c12,    100)) schedulerRefresh2 = true;
+		if (buyRatio(this.c22,     10)) schedulerRefresh2 = true;
+		if (buyRatio(this.c32,     10)) schedulerRefresh2 = true;
+		if (buyRatio(this.b3 ,    100)) schedulerRefresh3 = true;
+		if (buyRatio(this.c23,      2)) schedulerRefresh3 = true; 
+		if (buyRatio(this.c33,    100)) schedulerRefresh3 = true;
+		
+		let prevPhase = this.phase;
+		if (publicationMultiplier(this.theory) > this.phase3) this.phase = 4;
+		else if (publicationMultiplier(this.theory) > this.phase2) this.phase = 3;
+		else if (publicationMultiplier(this.theory) > this.phase1) this.phase = 2;
+		
+		if (prevPhase != this.phase) {
+			schedulerRefresh2 = true;
+			schedulerRefresh3 = true;
 		}
+		
+		if (schedulerRefresh1) {
+			this.scheduledUpgrades1 = [];
+			this.scheduledLevels1   = [0, 0];
+		}
+		
+		if (schedulerRefresh2) {
+			this.scheduledUpgrades2 = [];
+			this.scheduledLevels2   = [0, 0, 0, 0];
+		}
+		
+		if (schedulerRefresh3) {
+			this.scheduledUpgrades3 = [];
+			this.scheduledLevels3   = [0, 0, 0];
+		}
+
+		// rho1 purchases
+		while (this.scheduledUpgrades1.length) {
+
+			let upgradeIndex = this.scheduledUpgrades1[0][0];
+			let upgrade;
+			switch (upgradeIndex) {
+				case 0:
+					upgrade = this.b1;
+					break;
+				case 1:
+					upgrade = this.c31;
+					break;
+			}			
+
+			let levelBefore = upgrade.level;
+			upgrade.buy(1);
+			
+			if (levelBefore == upgrade.level)
+				break;
+
+			this.scheduledUpgrades1[0][1]--;
+			this.scheduledLevels1[upgradeIndex]--;
+			if (this.scheduledUpgrades1[0][1] <= 0)
+				this.scheduledUpgrades1.shift();
+
+		}
+
+		// rho2 purchases
+		while (this.scheduledUpgrades2.length) {
+
+			let upgradeIndex = this.scheduledUpgrades2[0][0];
+			let upgrade;
+			switch (upgradeIndex) {
+				case 0:
+					upgrade = this.b2;
+					break;
+				case 1:
+					upgrade = this.c12;
+					break;
+				case 2:
+					upgrade = this.c22;
+					break;
+				case 3:
+					upgrade = this.c32;
+					break;
+			}
+
+			let levelBefore = upgrade.level;
+			upgrade.buy(1);
+			
+			if (levelBefore == upgrade.level)
+				break;
+			
+			this.scheduledUpgrades2[0][1]--;
+			this.scheduledLevels2[upgradeIndex]--;
+			if (this.scheduledUpgrades2[0][1] <= 0)
+				this.scheduledUpgrades2.shift();
+
+		}
+		
+		// rho3 purchases
+		while (this.scheduledUpgrades3.length) {
+
+			let upgradeIndex = this.scheduledUpgrades3[0][0];
+			let upgrade;
+			switch (upgradeIndex) {
+				case 0:
+					upgrade = this.b3;
+					break;
+				case 1:
+					upgrade = this.c23;
+					break;
+				case 2:
+					upgrade = this.c33;
+					break;
+			}			
+
+			let levelBefore = upgrade.level;
+			upgrade.buy(1);
+			
+			if (levelBefore == upgrade.level)
+				break;
+
+			this.scheduledUpgrades3[0][1]--;
+			this.scheduledLevels3[upgradeIndex]--;
+			if (this.scheduledUpgrades3[0][1] <= 0)
+				this.scheduledUpgrades3.shift();
+
+		}
+		
+		let update = false;
+		if (this.updateSchedule1()) update = true;
+		if (this.updateSchedule2()) update = true;
+		if (this.updateSchedule3()) update = true;
+		if (update) this.showSchedule();
 		
 	}
 		
@@ -364,7 +857,7 @@ class T3 {
 	
 }
 
-// Utilizes T4AI (based on T4C3C12rcv) strategy with calculated publication multipliers
+// Utilizes T4AI (based on T4C3C12rcv) strategy with calculated publication multipliers 
 class T4 {
 	
 	constructor() {	
@@ -627,7 +1120,7 @@ class T5 {
 		this.c3.buy(-1); // autobuy
 		let vc3 = this.getC3;
 
-		let c2worth = this.predictQ(multiplier) >= vc3 * this.getC2 * 2 / 3;
+		let c2worth = this.predictQ(multiplier) >= vc3 * this.getC2 * 2 / 3; // NoDecay
 		while (c2worth && upgradeCost(this.c2) <= this.theory.currencies[0].value) {
 			this.c2.buy(1);
 			c2worth = this.predictQ(multiplier) >= vc3 * this.getC2 * 2 / 3;
@@ -636,15 +1129,15 @@ class T5 {
 		if (!c2worth)
 			buyRatio(this.c1, 2);
 
-		buyMax(this.q2, upgradeCost(this.c3));
+		buyMax(this.q2, upgradeCost(this.c3) / 2); // x2 ratio with c3Cost
 
-		if (this.theory.tau >= this.pub / 10 ** 0.5) return; // no q1 buying near pub
+		if (this.theory.tau >= 0.28 * this.pub) return; // StopQ1
 
 		let minCost = upgradeCost(this.c3).min(upgradeCost(this.q2).min(upgradeCost(this.c2)));
 		buyMax(this.q1, minCost / 10);
 
 		while (true) {
-			let q1weight = (10 + this.q1.level % 10) ** (1 / 1.4);
+			let q1weight = (5.5 + this.q1.level % 10 * 0.35);
 			let q1Prev = this.q1.level;
 			buyMax(this.q1, minCost / 10);
 			if (q1Prev == this.q1.level)
@@ -676,10 +1169,10 @@ class T5 {
 class T6 {
 	
 	constructor() {
-		
+
 		this.id = 5;
 		this.theory = game.activeTheory;
-		
+
 		this.upgrades = this.theory.upgrades;
 		this.q1 = this.upgrades[0];
 		this.q2 = this.upgrades[1];
@@ -688,19 +1181,19 @@ class T6 {
 		this.c1 = this.upgrades[4];
 		this.c2 = this.upgrades[5];		
 		this.c5 = this.upgrades[8];
-						
+
 		this.setPub();
 		
 	}
-	
+
 	get getC1() {
 		return Utils.getStepwisePowerSum(this.c1.level, 2, 10, 1).pow(1 + this.theory.milestoneUpgrades[3].level * 0.05);
 	}
-	
+
 	get getC2() {
 		return toBig(2).pow(this.c2.level);
 	}
-		
+
 	get maxRho() {
 		let max = toBig(0);
 		for (let i = 0; i < this.upgrades.length; i++) {
@@ -713,27 +1206,27 @@ class T6 {
 		max = max.max(this.theory.currencies[0].value);
 		return max;
 	}
-	
+
 	get getMaxC5() {
 		let rho = this.maxRho;
 		if (rho < 15)
 			return 0;
 		return toBig(2).pow((rho / 15).log2() / Math.log2(3.9));
 	}
-	
+
 	get r() {
 		let string = this.theory.tertiaryEquation;
 		let begin  = string.indexOf("r=");
 		let end    = string.indexOf(",", begin);
 		return parseBigNumber(string.substring(begin + 2, end)).max(Number.MIN_VALUE);
 	}
-		
+
 	c5Cost(rho) {
 		if (rho < 15)
 			return toBig(0);
 		return toBig(3.9).pow(((rho / 15).log2() / Math.log2(3.9)).floor()) * 15;
 	}
-		
+
 	setPub() {
 		
 		let target;
@@ -751,7 +1244,7 @@ class T6 {
 		this.coast = this.pub / 4;
 		
 	}
-	
+
 	buy() {
 		
 		if (buySkip()) return;
@@ -827,19 +1320,24 @@ class T6 {
 class T7 {
 	
 	constructor() {
-		
+
 		this.id = 6;
 		this.theory = game.activeTheory;
-		
+
 		this.upgrades = this.theory.upgrades;
 		this.q1 = this.upgrades[0];
 		this.c3 = this.upgrades[3];	
 		this.c4 = this.upgrades[4];
 		this.c5 = this.upgrades[5];
 		this.c6 = this.upgrades[6];
-						
+
 		this.setPub();
-		
+
+		this.scheduledUpgrades = [];
+		this.scheduledLevels   = [0, 0, 0, 0, 0];
+
+		theory.secondaryEquationHeight = 20;
+
 	}
 	
 	c6CostNext(rho) {
@@ -863,22 +1361,111 @@ class T7 {
 		
 	}
 	
-	buy() {
+	updateSchedule() {
+
+		if (this.scheduledUpgrades.length >= 25) return false;
+
+		while (this.scheduledUpgrades.length < 25) {
+			
+			let costs = [
+				this.q1.cost.getCost(this.q1.level + this.scheduledLevels[0]) * 4,
+				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[1]) * 10,
+				this.c4.cost.getCost(this.c4.level + this.scheduledLevels[2]) * 10,
+				this.c5.cost.getCost(this.c5.level + this.scheduledLevels[3]) * 4,
+				this.c6.cost.getCost(this.c6.level + this.scheduledLevels[4]),
+			];
+			let minCost = [parseBigNumber("ee999999"), null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels[minCost[1]]);
+			if (cost >= this.coast)
+				break;
+			if (minCost[1] != null) {
+				this.scheduledLevels[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades[this.scheduledUpgrades.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades.push([minCost[1], 1]);
+			}
+			else break;
+
+		}	
+				
+		return true;
 		
+	}
+	
+	showSchedule() {
+		secondaryEquation = "";
+		if (this.scheduledUpgrades.length)
+			secondaryEquation = "Next\\ upgrades: ";
+		for (let i = 0; i < Math.min(this.scheduledUpgrades.length, 5); i++){
+			if (this.scheduledUpgrades[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades[i][1];
+			secondaryEquation += (this.scheduledUpgrades[i][0] == 0 ? "q1" : "c" + (this.scheduledUpgrades[i][0] + 2));
+			if (i + 1 < Math.min(this.scheduledUpgrades.length, 5))
+				secondaryEquation += ", ";
+		}
+		theory.invalidateSecondaryEquation();		
+	}
+	
+	buy() {
+				
 		if (buySkip()) return;
 		
 		if (this.theory.tau >= this.coast && enablePublications.level) return;
 		
-		this.c6.buy(-1); // autobuy
-		
-		buyMax(this.c5, upgradeCost(this.c6) / 4);
-		
-		buyMax(this.c4, upgradeCost(this.c6) / 10);
-		
-		buyMax(this.c3, upgradeCost(this.c6) / 10);
+		let schedulerRefresh = false;
+		if (buyRatio(this.q1,  4)) schedulerRefresh = true;
+		if (buyRatio(this.c3, 10)) schedulerRefresh = true; 
+		if (buyRatio(this.c4, 10)) schedulerRefresh = true;
+		if (buyRatio(this.c5,  4)) schedulerRefresh = true;
+		if (buyRatio(this.c5,  2)) schedulerRefresh = true;
 
-		buyMax(this.q1, upgradeCost(this.c6) / 4);
+		if (schedulerRefresh) {
+			this.scheduledUpgrades = [];
+			this.scheduledLevels   = [0, 0, 0, 0, 0];
+		}
+
+		while (this.scheduledUpgrades.length) {
+
+			let upgradeIndex = this.scheduledUpgrades[0][0];
+			let upgrade; 
+			switch (upgradeIndex) {
+				case 0:
+					upgrade = this.q1;
+					break;
+				case 1:
+					upgrade = this.c3;
+					break;
+				case 2:
+					upgrade = this.c4;
+					break;
+				case 3:
+					upgrade = this.c5;
+					break;
+				case 4:
+					upgrade = this.c6;
+					break;
+			}			
+
+			let levelBefore = upgrade.level;
+			upgrade.buy(1);
+			
+			if (levelBefore == upgrade.level)
+				break;
+			
+			this.scheduledUpgrades[0][1]--; 
+			this.scheduledLevels[upgradeIndex]--;
+			if (this.scheduledUpgrades[0][1] <= 0)
+				this.scheduledUpgrades.shift();
+
+		}
 		
+		if (this.updateSchedule()) this.showSchedule();
+				
 	}
 	
 	tick(elapsedTime, multiplier) {
@@ -916,9 +1503,14 @@ class T8 {
 		this.c5 = this.upgrades[4];
 						
 		this.setPub();
-		
+				
 		this.resetAttractor();
 		
+		this.scheduledUpgrades = [];
+		this.scheduledLevels   = [0, 0, 0, 0, 0];
+				
+		theory.secondaryEquationHeight = 20;
+				
 	}
 	
 	c2CostNext(rho) {
@@ -940,32 +1532,100 @@ class T8 {
 		let c4Last = this.c4Cost(lastPub); 
 		let c2NearC4 = this.c2CostNext(c4Last);  
 
-		let coef = c2NearC4 / c4Last > 7 ? 3 : 4;
+		let coef = c2NearC4 / c4Last > 7 ? 3 : 4; 
 		this.pub = c4Last * c4Step ** coef * 1.1;
-		this.coast = this.pub / 5;		
+		this.coast = this.pub / 4;
 		
 	}
 	
-	buy() {
+	updateSchedule() {
+
+		if (this.scheduledUpgrades.length >= 25) return false;
+
+		while (this.scheduledUpgrades.length < 25) {
+			
+			let costs = [
+				this.c1.cost.getCost(this.c1.level + this.scheduledLevels[0]) * (5.5 + ((this.c1.level + this.scheduledLevels[0]) % 10) / 1.5),
+				this.c2.cost.getCost(this.c2.level + this.scheduledLevels[1]),
+				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * 4,
+				this.c4.cost.getCost(this.c4.level + this.scheduledLevels[3]) * 1.3,
+				this.c5.cost.getCost(this.c5.level + this.scheduledLevels[4]) * 2.5,
+			];
+			let minCost = [parseBigNumber("ee999999"), null];
+			for (let i = 0; i < costs.length; i++)
+				if (costs[i] < minCost[0])
+					minCost = [costs[i], i];
+			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels[minCost[1]]);
+			if (cost >= this.coast)
+				break;
+			if (minCost[1] != null) {
+				this.scheduledLevels[minCost[1]]++;
+				let lastUpgrade = this.scheduledUpgrades[this.scheduledUpgrades.length - 1];
+				if (lastUpgrade != undefined && lastUpgrade[0] == minCost[1]) 
+					lastUpgrade[1]++;
+				else
+					this.scheduledUpgrades.push([minCost[1], 1]);
+			}
+
+		}	
 		
-		if (buySkip()) return;
-		
-		if (this.theory.tau >= this.coast && enablePublications.level) return;
-		
-		let minCost = upgradeCost(this.c2).min(upgradeCost(this.c4));
-		
-		buyMax(this.c5, minCost / 2.5);
-		
-		this.c4.buy(-1); // autobuy
-		
-		buyMax(this.c3, minCost / 4);
-		
-		this.c2.buy(-1); // autobuy
-		
-		let c1weight = (10 + this.c1.level % 10) ** (1 / 1.2);
-		buyMax(this.c1, minCost / c1weight);
+		return true;
 		
 	}
+	
+	showSchedule() {
+		secondaryEquation = "";
+		if (this.scheduledUpgrades.length)
+			secondaryEquation = "Next\\ upgrades: ";
+		for (let i = 0; i < Math.min(this.scheduledUpgrades.length, 5); i++){
+			if (this.scheduledUpgrades[i][1] > 1)
+				secondaryEquation += this.scheduledUpgrades[i][1];
+			secondaryEquation += "c" + (this.scheduledUpgrades[i][0] + 1);
+			if (i + 1 < Math.min(this.scheduledUpgrades.length, 5))
+				secondaryEquation += ", ";
+		}
+		theory.invalidateSecondaryEquation();		
+	}
+	
+	buy() {
+
+		if (buySkip()) return;
+
+		if (this.theory.tau >= this.coast && enablePublications.level) return;
+
+		let schedulerRefresh = false;
+
+		if (buyRatio(this.c1,  12)) schedulerRefresh = true;
+		if (buyRatio(this.c2,   2)) schedulerRefresh = true;
+		if (buyRatio(this.c3,   4)) schedulerRefresh = true; 
+		if (buyRatio(this.c4, 1.3)) schedulerRefresh = true;
+		if (buyRatio(this.c5, 2.5)) schedulerRefresh = true;
+
+		if (schedulerRefresh) {
+			this.scheduledUpgrades = [];
+			this.scheduledLevels   = [0, 0, 0, 0, 0];
+		}
+
+		while (this.scheduledUpgrades.length) {
+
+			let upgradeIndex = this.scheduledUpgrades[0][0];
+
+			let levelBefore = this.upgrades[upgradeIndex].level;
+			game.activeTheory.upgrades[upgradeIndex].buy(1);
+			
+			if (levelBefore == this.upgrades[upgradeIndex].level)
+				break;
+			
+			this.scheduledUpgrades[0][1]--;
+			this.scheduledLevels[upgradeIndex]--;
+			if (this.scheduledUpgrades[0][1] <= 0)
+				this.scheduledUpgrades.shift();
+
+		}
+		
+		if (this.updateSchedule()) this.showSchedule();
+
+	}		
 	
 	resetAttractor() {
 		this.timer = 0;
@@ -1098,7 +1758,7 @@ class UIutils {
 		buttonFrame.onTouched = (touchEvent) => {
 			if (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED) {
 				buttonFrame.borderColor = Color.MINIGAME_TILE_BORDER;
-				switchTheory(true);
+				switchTheory(true);							
 			}
 			else if (touchEvent.type == TouchType.PRESSED || touchEvent.type == TouchType.LONGPRESS) {
 				buttonFrame.borderColor = Color.BORDER;
@@ -1187,63 +1847,6 @@ var getUpgradeListDelegate = () => {
  
 var	isCurrencyVisible = index => false;
 
-var getQuaternaryEntries = () => {
-
-	let decay = [
-		30.1935671759384,
-		37.4972532637665,
-		30.7608639120181,
-		44.9544911685781,
-		39.2687021300084,
-		102.119195226465,
-		26.7695950304505,
-		17.6476778516314
-	];
-	let timeMult = [1, 10.2, 1, 1.5, 1, 3, 1, 1];
-	let base = [
-		2.59,
-		11.4,
-		1.34,
-		2.85,
-		44.3,
-		4.52,
-		2.15,
-		4.84
-	];
-		
-	let tau;
-	let tauH;	
-		
-	for (let i = 0; i < 8; i++) {
-		
-		tau = game.theories[i].tauPublished.log10();
-		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
-		quaternaryEntries[i].value = formatQValue(tauH);
-		
-	}
-	
-	// T4 low tau check
-	decay = 27.0085302950228;
-	base = 1.51;
-	timeMult = 1;
-	
-	tau = game.theories[3].tauPublished.log10();
-	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[3]) / decay);
-	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
-	
-	// T6 low tau check
-	decay = 70.0732254255212;
-	base = 7;
-	timeMult = 2;
-	
-	tau = game.theories[5].tauPublished.log10();
-	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[5]) / decay);
-	quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
-
-    return quaternaryEntries;
-	
-}
-
 var tick = (elapsedTime, multiplier) => {
 
 	if (game.activeTheory !== null) {
@@ -1271,21 +1874,21 @@ var tick = (elapsedTime, multiplier) => {
 
 // creating theory settings
 {
-	
+
 	fictitiousCurrency = theory.createCurrency();
-	
+
 	// Theory on/off upgrades
 	for (let i = 0; i < 8; i++)
 		theory.createUpgrade(i, fictitiousCurrency, new FreeCost);
-	
+
 	enableVariablePurchase = theory.createUpgrade(8, fictitiousCurrency, new FreeCost);
-	
+
 	enableMSPurchase = theory.createUpgrade(9, fictitiousCurrency, new FreeCost);
-	
+
 	enablePublications = theory.createUpgrade(10, fictitiousCurrency, new FreeCost);
-	
+
 	enableTheorySwitch = theory.createUpgrade(11, fictitiousCurrency, new FreeCost);
-		
+	
 }
 
 refreshTheoryManager(); // creating theory manager on initialization
