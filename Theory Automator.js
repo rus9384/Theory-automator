@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.4";
+var version = "1.4a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -231,23 +231,34 @@ class T1 {
 	updateSchedule() {
 
 		if (this.scheduledUpgrades.length >= 25) return false;
-
-		let ratios = [5, 1.11, 5, 1];
+		
+		let veryBigNumber = parseBigNumber("ee999999");
 
 		while (this.scheduledUpgrades.length < 25) {
 
+			let q1cost = this.q1.cost.getCost(this.q1.level + this.scheduledLevels[0]);
+			let q2cost = this.q2.cost.getCost(this.q2.level + this.scheduledLevels[1]);
+			let c4cost = this.c4.cost.getCost(this.c4.level + this.scheduledLevels[3]);
+
+			let q1weightedCost = q1cost * 5;
+			if (
+				q1cost * (6.9 + (this.q1.level + this.scheduledLevels[0]) % 10) >= q2cost ||
+				q1cost * (15.2 + (this.q1.level + this.scheduledLevels[0]) % 10) >= c4cost
+			) 
+				q1weightedCost = veryBigNumber;
+
 			let costs = [
-				this.q1.cost.getCost(this.q1.level + this.scheduledLevels[0]) * (6.9 + (this.q1.level + this.scheduledLevels[0]) % 10),
-				this.q2.cost.getCost(this.q2.level + this.scheduledLevels[1]),
+				q1weightedCost,
+				q2cost * 1.11,
 				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * 5,
-				this.c4.cost.getCost(this.c4.level + this.scheduledLevels[3])
+				c4cost
 			];
 			let minCost = [parseBigNumber("ee999999"), null];
 			for (let i = 0; i < costs.length; i++)
 				if (costs[i] < minCost[0])
 					minCost = [costs[i], i];
 			let cost = this.upgrades[minCost[1]].cost.getCost(this.upgrades[minCost[1]].level + this.scheduledLevels[minCost[1]]);
-			if (cost * ratios[minCost[1]] >= this.coast)
+			if (cost >= this.coast)
 				break;
 			if (minCost[1] != null) {
 				this.scheduledLevels[minCost[1]]++;
@@ -699,6 +710,11 @@ class T3 {
 
 	buy() {
 
+		let prevPhase = this.phase;
+		if (publicationMultiplier(this.theory) > this.phase3) this.phase = 4;
+		else if (publicationMultiplier(this.theory) > this.phase2) this.phase = 3;
+		else if (publicationMultiplier(this.theory) > this.phase1) this.phase = 2;
+
 		if (buySkip()) return;
 
 		let schedulerRefresh1 = false;
@@ -714,12 +730,7 @@ class T3 {
 		if (buyRatio(this.b3 ,    100)) schedulerRefresh3 = true;
 		if (buyRatio(this.c23,      2)) schedulerRefresh3 = true; 
 		if (buyRatio(this.c33,    100)) schedulerRefresh3 = true;
-		
-		let prevPhase = this.phase;
-		if (publicationMultiplier(this.theory) > this.phase3) this.phase = 4;
-		else if (publicationMultiplier(this.theory) > this.phase2) this.phase = 3;
-		else if (publicationMultiplier(this.theory) > this.phase1) this.phase = 2;
-		
+				
 		if (prevPhase != this.phase) {
 			schedulerRefresh2 = true;
 			schedulerRefresh3 = true;
@@ -1139,7 +1150,7 @@ class T5 {
 		while (true) {
 			let q1weight = (5.5 + this.q1.level % 10 * 0.35);
 			let q1Prev = this.q1.level;
-			buyMax(this.q1, minCost / 10);
+			buyMax(this.q1, minCost / q1weight);
 			if (q1Prev == this.q1.level)
 				break;
 		}
@@ -1326,6 +1337,8 @@ class T7 {
 
 		this.upgrades = this.theory.upgrades;
 		this.q1 = this.upgrades[0];
+		this.c1 = this.upgrades[1];	
+		this.c2 = this.upgrades[2];		
 		this.c3 = this.upgrades[3];	
 		this.c4 = this.upgrades[4];
 		this.c5 = this.upgrades[5];
@@ -1405,6 +1418,8 @@ class T7 {
 			if (this.scheduledUpgrades[i][1] > 1)
 				secondaryEquation += this.scheduledUpgrades[i][1];
 			secondaryEquation += (this.scheduledUpgrades[i][0] == 0 ? "q1" : "c" + (this.scheduledUpgrades[i][0] + 2));
+			if (this.scheduledUpgrades[i][0] == 0 || this.scheduledUpgrades[i][0] == 4)
+				secondaryEquation += "*";
 			if (i + 1 < Math.min(this.scheduledUpgrades.length, 5))
 				secondaryEquation += ", ";
 		}
@@ -1416,6 +1431,9 @@ class T7 {
 		if (buySkip()) return;
 		
 		if (this.theory.tau >= this.coast && enablePublications.level) return;
+		
+		let q1level = this.q1.level;
+		let c6level = this.c6.level;
 		
 		let schedulerRefresh = false;
 		if (buyRatio(this.q1,  4)) schedulerRefresh = true;
@@ -1456,12 +1474,17 @@ class T7 {
 			
 			if (levelBefore == upgrade.level)
 				break;
-			
+						
 			this.scheduledUpgrades[0][1]--; 
 			this.scheduledLevels[upgradeIndex]--;
 			if (this.scheduledUpgrades[0][1] <= 0)
 				this.scheduledUpgrades.shift();
 
+		}
+		
+		if (q1level < this.q1.level || c6level < this.c6.level) {
+			this.upgrades[1].buy(-1);
+			this.upgrades[2].buy(-1);
 		}
 		
 		if (this.updateSchedule()) this.showSchedule();
