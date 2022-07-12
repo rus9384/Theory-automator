@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5c";
+var version = "1.5d";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1257,9 +1257,9 @@ class T5 {
 
 		let schedulerRefresh = false;
 		if (buyRatio(this.q1,   100)) schedulerRefresh = true;
-		if (buyRatio(this.q2,     2)) schedulerRefresh = true; 
+		if (buyRatio(this.q2,     4)) schedulerRefresh = true;
 		if (buyRatio(this.c1, 10000)) schedulerRefresh = true;
-		if (buyRatio(this.c3,     1)) schedulerRefresh = true;
+		if (buyRatio(this.c3,     2)) schedulerRefresh = true;
 
 		let c2worth;
 
@@ -1552,7 +1552,7 @@ class T7 {
 		let c6Next = this.c6CostNext(lastPub);
 		
 		c6Next *= 2.81 ** 5;
-		this.pub = c6Next * 1.01;
+		this.pub = c6Next * 1.03;
 		
 		if (this.pub / lastPub < 491) // correction
 			this.pub *= 2.81;
@@ -1652,10 +1652,10 @@ class T7 {
 		let c6level = this.c6.level;
 		
 		let schedulerRefresh = false;
-		if (buyRatio(this.q1,  4)) schedulerRefresh = true;
-		if (buyRatio(this.c3, 10)) schedulerRefresh = true;
-		if (buyRatio(this.c4, 10)) schedulerRefresh = true;
-		if (buyRatio(this.c5,  4)) schedulerRefresh = true;
+		if (buyRatio(this.q1, 10)) schedulerRefresh = true;
+		if (buyRatio(this.c3, 20)) schedulerRefresh = true;
+		if (buyRatio(this.c4, 20)) schedulerRefresh = true;
+		if (buyRatio(this.c5, 10)) schedulerRefresh = true;
 		if (buyRatio(this.c6,  2)) schedulerRefresh = true;
 
 		if (schedulerRefresh) {
@@ -1821,11 +1821,11 @@ class T8 {
 
 		let schedulerRefresh = false;
 
-		if (buyRatio(this.c1,  12)) schedulerRefresh = true;
-		if (buyRatio(this.c2,   2)) schedulerRefresh = true;
-		if (buyRatio(this.c3,   4)) schedulerRefresh = true; 
-		if (buyRatio(this.c4, 1.3)) schedulerRefresh = true;
-		if (buyRatio(this.c5, 2.5)) schedulerRefresh = true;
+		if (buyRatio(this.c1, 25)) schedulerRefresh = true;
+		if (buyRatio(this.c2,  2)) schedulerRefresh = true;
+		if (buyRatio(this.c3, 10)) schedulerRefresh = true; 
+		if (buyRatio(this.c4,  3)) schedulerRefresh = true;
+		if (buyRatio(this.c5,  5)) schedulerRefresh = true;
 
 		if (schedulerRefresh) {
 			this.scheduledUpgrades = [];
