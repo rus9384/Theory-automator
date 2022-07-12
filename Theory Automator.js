@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5d";
+var version = "1.5e";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -883,9 +883,11 @@ class T3 {
 
 		}
 		
-		if (this.updateSchedule1()) update = true;
-		if (this.updateSchedule2()) update = true;
-		if (this.updateSchedule3()) update = true;
+		if (this.theory.currencies[0].value > this.theory.tauPublished / 1e20) {
+			if (this.updateSchedule1()) update = true;
+			if (this.updateSchedule2()) update = true;
+			if (this.updateSchedule3()) update = true;
+		}
 		if (update) this.showSchedule();
 		
 	}
