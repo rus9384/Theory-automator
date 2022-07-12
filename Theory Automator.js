@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5a";
+var version = "1.5b";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -478,28 +478,40 @@ class T2 {
 		if (this.updateSchedule()) this.showSchedule();
 
 		if (publicationMultiplier(this.theory) >= this.qr1 && enablePublications.level) {
-			this.phase = 5;
+			if (this.phase != 5) {
+				this.phase = 5;
+				theory.invalidatePrimaryEquation();
+			}
 			return;
 		}
 		this.upgrades[0].buy(-1);
 		this.upgrades[4].buy(-1);
 		
 		if (publicationMultiplier(this.theory) >= this.qr2 && enablePublications.level) {
-			this.phase = 4;
+			if (this.phase != 4) {
+				this.phase = 4;
+				theory.invalidatePrimaryEquation();
+			}
 			return;
 		}
 		this.upgrades[1].buy(-1);
 		this.upgrades[5].buy(-1);
 
 		if (publicationMultiplier(this.theory) >= this.qr3 && enablePublications.level) {
-			this.phase = 3;
+			if (this.phase != 3) {
+				this.phase = 3;
+				theory.invalidatePrimaryEquation();
+			}
 			return;
 		}
 		this.upgrades[2].buy(-1);
 		this.upgrades[6].buy(-1);
 		
 		if (publicationMultiplier(this.theory) >= this.qr4 && enablePublications.level) {
-			this.phase = 2;
+			if (this.phase != 2) {
+				this.phase = 2;
+				theory.invalidatePrimaryEquation();
+			}
 			return;
 		}
 		this.upgrades[3].buy(-1);
@@ -742,6 +754,9 @@ class T3 {
 		if (publicationMultiplier(this.theory) > this.phase3) this.phase = 4;
 		else if (publicationMultiplier(this.theory) > this.phase2) this.phase = 3;
 		else if (publicationMultiplier(this.theory) > this.phase1) this.phase = 2;
+		
+		if (prevPhase != this.phase)
+			theory.invalidatePrimaryEquation();
 
 		if (buySkip()) return;
 
