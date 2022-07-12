@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5";
+var version = "1.5a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -42,10 +42,8 @@ var secondaryEquation = "";
 var getSecondaryEquation = () => "" + secondaryEquation;
 
 var quaternaryEntries = [];
-{
-	for (let i = 0; i < 8; i++) {
-		quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null))
-	}
+for (let i = 0; i < 8; i++) {
+	quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null));
 }
 var getQuaternaryEntries = () => {
 
@@ -409,11 +407,10 @@ class T2 {
 	updateSchedule() {
 
 		let veryBigNumber = parseBigNumber("ee999999");
-
-		if (this.scheduledUpgrades.length >= 5) return false;
 		
-		if (this.phase == 5) return true;
+		if (this.phase >= 5) return true;
 		
+		this.scheduledUpgrades = [];
 		this.scheduledLevels = [0, 0, 0, 0, 0, 0, 0, 0];
 
 		while (this.scheduledUpgrades.length < 5) {
@@ -474,9 +471,8 @@ class T2 {
 		theory.invalidateSecondaryEquation();		
 	}
 	
-
 	buy() {
-		
+
 		if (buySkip()) return;
 
 		if (this.updateSchedule()) this.showSchedule();
@@ -508,7 +504,7 @@ class T2 {
 		}
 		this.upgrades[3].buy(-1);
 		this.upgrades[7].buy(-1);		
-				
+
 	}
 		
 	tick(elapsedTime, multiplier) {
@@ -551,7 +547,7 @@ class T3 {
 
 		this.phase1 = this.theory.tauPublished / 10;
 		this.phase2 = 1.2;
-		this.phase3 = 2.2;				
+		this.phase3 = 2.4;				
 		this.pub 	= 2.5;
 		this.phase  = 1;
 		
@@ -598,7 +594,7 @@ class T3 {
 			if (minCost == null) break;
 			let upgrade = this.upgradeByIndex1(minCost[1]);
 			let cost = upgrade.cost.getCost(upgrade.level + this.scheduledLevels1[minCost[1]]);
-			if (cost >= this.theory.tauPublished / 3.8)
+			if (cost >= this.theory.tauPublished / 10)
 				break;
 			this.scheduledLevels1[minCost[1]]++;
 			let lastUpgrade = this.scheduledUpgrades1[this.scheduledUpgrades1.length - 1];
@@ -1924,6 +1920,11 @@ class UIutils {
 					timer = 5;
 					primaryEquation = "Theory\\; " + (id + 1) + "\\; requires\\; " + requirements[id] + "\\; " + game.theories[id].latexSymbol;
 					theory.invalidatePrimaryEquation();
+				}
+				
+				if (!variable.level && (game.activeTheory?.id == id || variable == enableVariablePurchase)) {
+					secondaryEquation = "";
+					theory.invalidateSecondaryEquation();
 				}
 				
 				labelRight.text = variable.level == 1 ? "✓" : "✗";
