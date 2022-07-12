@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5b";
+var version = "1.5c";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1656,7 +1656,7 @@ class T7 {
 		if (buyRatio(this.c3, 10)) schedulerRefresh = true;
 		if (buyRatio(this.c4, 10)) schedulerRefresh = true;
 		if (buyRatio(this.c5,  4)) schedulerRefresh = true;
-		if (buyRatio(this.c5,  2)) schedulerRefresh = true;
+		if (buyRatio(this.c6,  2)) schedulerRefresh = true;
 
 		if (schedulerRefresh) {
 			this.scheduledUpgrades = [];
