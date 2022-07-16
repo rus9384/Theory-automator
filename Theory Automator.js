@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5e";
+var version = "1.5f";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1686,14 +1686,20 @@ class T7 {
 				this.scheduledUpgrades.shift();
 
 		}
-		
+
+		if (this.theory.currencies[0].value < this.theory.tauPublished / 1e20) return;
+
+		if (this.updateSchedule() || bought) this.showSchedule();
+
+		if (this.theory.currencies[0].value < this.theory.tauPublished / 1e11) return;
+		if (!this.scheduledUpgrades.length) return;
+		if (this.theory.currencies[0].value * 4 >= this.scheduledUpgrades[0][0]) return;
+
 		if (q1level < this.q1.level || c6level < this.c6.level) {
 			this.upgrades[1].buy(-1);
 			this.upgrades[2].buy(-1);
 		}
-		
-		if (this.theory.currencies[0].value > this.theory.tauPublished / 1e20 && (this.updateSchedule() || bought)) this.showSchedule();
-				
+
 	}
 	
 	tick(elapsedTime, multiplier) {
@@ -2069,7 +2075,7 @@ var getUpgradeListDelegate = () => {
 	let separator = ui.createBox({
 		heightRequest: 1
 	});
-	
+			
     let stack = ui.createStackLayout({
 		padding: Thickness(0, 3, 0, 0),
 		spacing: 3,
