@@ -1692,8 +1692,7 @@ class T7 {
 		if (this.updateSchedule() || bought) this.showSchedule();
 
 		if (this.theory.currencies[0].value < this.theory.tauPublished / 1e11) return;
-		if (!this.scheduledUpgrades.length) return;
-		if (this.theory.currencies[0].value * 4 >= this.scheduledUpgrades[0][0]) return;
+		if (this.theory.currencies[0].value * 4 >= upgradeCost(this.c6)) return;
 
 		if (q1level < this.q1.level || c6level < this.c6.level) {
 			this.upgrades[1].buy(-1);
