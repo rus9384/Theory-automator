@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5f";
+var version = "1.5g";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -43,7 +43,7 @@ var getSecondaryEquation = () => "" + secondaryEquation;
 
 var quaternaryEntries = [];
 for (let i = 0; i < 8; i++) {
-	quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), null));
+	quaternaryEntries.push(new QuaternaryEntry("τ_" + (i + 1), 0));
 }
 var getQuaternaryEntries = () => {
 
@@ -72,7 +72,7 @@ var getQuaternaryEntries = () => {
 	let tau;
 	let tauH;	
 		
-	for (let i = 0; i < 8; i++) {
+	for (let i = 0; i < game.theories.length; i++) {
 		
 		tau = game.theories[i].tauPublished.log10();
 		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
@@ -81,6 +81,8 @@ var getQuaternaryEntries = () => {
 	}
 	
 	// T4 low tau check
+	if (game.theories.length < 4) return quaternaryEntries;
+	
 	decay = 27.0085302950228;
 	base = 1.51;
 	timeMult = 1;
@@ -90,6 +92,8 @@ var getQuaternaryEntries = () => {
 	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
 	
 	// T6 low tau check
+	if (game.theories.length < 6) return quaternaryEntries;
+	
 	decay = 70.0732254255212;
 	base = 7;
 	timeMult = 2;
@@ -152,7 +156,7 @@ function switchTheory(manualSwitch = false) {
 
 	let iMax = -1;
 	let max  = 0;
-	for (let i = 0; i < 8; i++) {
+	for (let i = 0; i < game.theories.length; i++) {
 		if (!theory.upgrades[i].level) continue;
 		let value = parseFloat(theory.quaternaryValue(i));
 		if (value > max) {
@@ -993,23 +997,23 @@ class T4 {
 	 
 		this.pub = c3Near; 
 		if (block == 5) {
-		  if (c3Amount == 0)
+		  if (c3Amount <= 5)
 			this.pub *= 2.468 ** 10;
-		  else if (c3Amount <= 10)
+		  else if (c3Amount <= 14)
 			this.pub *= 2.468 ** 19;
-		  else if (c3Amount <= 19) 
+		  else if (c3Amount <= 23) 
 			this.pub *= 2.468 ** 28;
-		  else if (c3Amount <= 28)
+		  else if (c3Amount <= 32)
 			this.pub *= 2.468 ** 37;
 		  else 
 			this.pub *= 2.468 ** 46;
 		} 
 		else {
-		  if (c3Amount == 0)
+		  if (c3Amount <= 5)
 			this.pub *= 2.468 ** 10;
-		  else if (c3Amount <= 10)
+		  else if (c3Amount <= 15)
 			this.pub *= 2.468 ** 20;
-		  else if (c3Amount <= 20) 
+		  else if (c3Amount <= 24) 
 			this.pub *= 2.468 ** 29;
 		  else
 			this.pub *= 2.468 ** 38;
@@ -1470,7 +1474,7 @@ class T6 {
 		for (let n = 0; n < 50; n++) { // limited with 50 purchases per tick
 			
 			let k = (this.getMaxC5 * rHalf) / (this.getC1 * this.getC2);
-			let c1WithWeight = upgradeCost(this.c1) * (10 + (this.c1.level % 10)) ** (1 / 1.05);
+			let c1WithWeight = upgradeCost(this.c1) * (5.5 + (this.c1.level % 10)) ** (1 / 1.15);
 			let c2Cost = upgradeCost(this.c2);
 			let c2weight = (c2Cost * 2 ** 0.5 > upgradeCost(this.r2).min(upgradeCost(this.q2))) ? 2 ** 0.5 : 1;
 			let veryBigNumber = parseBigNumber("ee999999");
