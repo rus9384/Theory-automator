@@ -75,7 +75,7 @@ var getQuaternaryEntries = () => {
 	let tau;
 	let tauH;	
 		
-	for (let i = 0; i < game.researchUpgrades[7].level; i++) {
+	for (let i = 0; i < Math.min(8, game.researchUpgrades[7].level); i++) {
 		tau = game.theories[i].tauPublished.log10();
 		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
 		quaternaryEntries[i].value = formatQValue(tauH);
@@ -160,7 +160,7 @@ function switchTheory(manualSwitch = false) {
 
 	let iMax = -1;
 	let max  = 0;
-	for (let i = 0; i < game.researchUpgrades[7].level; i++) {
+	for (let i = 0; i < Math.min(8, game.researchUpgrades[7].level); i++) {
 		if (!theory.upgrades[i].level) continue;
 		let value = parseFloat(theory.quaternaryValue(i));
 		if (value > max) {
