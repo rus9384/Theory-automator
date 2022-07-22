@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5h";
+var version = "1.5i";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -23,7 +23,7 @@ function getPrimaryEquation() {
 
 	if (primaryEquation != "") return primaryEquation;
 	
-	if (game.activeTheory === null) return "";
+	if (game.activeTheory === null || game.activeTheory.id === 8) return "";
 	
 	let coastText = "\\begin{eqnarray}";
 	if (theoryManager.id != 1 && theoryManager.id != 2)
@@ -2100,6 +2100,8 @@ var getUpgradeListDelegate = () => {
 var	isCurrencyVisible = index => false;
 
 var tick = (elapsedTime, multiplier) => {
+
+	if (game.activeTheory?.id === 8) return;
 
 	if (game.activeTheory !== null) {
 		if (game.activeTheory.id !== theoryManager?.id || game.activeTheory.currencies[0].value == 0)
