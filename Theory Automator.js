@@ -2,12 +2,13 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.5g";
+var version = "1.5h";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
 var timer = 0;
 var requirements = [150, 250, 175, 175, 150, 150, 175, 220];
+var R8;
 var R9;
 var test;
 
@@ -19,8 +20,10 @@ var getR9 = () => (game.sigmaTotal / 20) ** game.researchUpgrades[8].level;
 var primaryEquation = "";
 theory.primaryEquationHeight = 45;
 function getPrimaryEquation() {
-	
+
 	if (primaryEquation != "") return primaryEquation;
+	
+	if (game.activeTheory === null) return "";
 	
 	let coastText = "\\begin{eqnarray}";
 	if (theoryManager.id != 1 && theoryManager.id != 2)
@@ -72,16 +75,17 @@ var getQuaternaryEntries = () => {
 	let tau;
 	let tauH;	
 		
-	for (let i = 0; i < game.theories.length; i++) {
-		
+	for (let i = 0; i < game.researchUpgrades[7].level; i++) {
 		tau = game.theories[i].tauPublished.log10();
 		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
 		quaternaryEntries[i].value = formatQValue(tauH);
-		
+	}
+	for (let i = game.researchUpgrades[7].level; i < 8; i++) {
+		quaternaryEntries[i].value = formatQValue(0);
 	}
 	
 	// T4 low tau check
-	if (game.theories.length < 4) return quaternaryEntries;
+	if (game.researchUpgrades[7].level < 4) return quaternaryEntries;
 	
 	decay = 27.0085302950228;
 	base = 1.51;
@@ -92,7 +96,7 @@ var getQuaternaryEntries = () => {
 	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
 	
 	// T6 low tau check
-	if (game.theories.length < 6) return quaternaryEntries;
+	if (game.researchUpgrades[7].level < 6) return quaternaryEntries;
 	
 	decay = 70.0732254255212;
 	base = 7;
@@ -156,7 +160,7 @@ function switchTheory(manualSwitch = false) {
 
 	let iMax = -1;
 	let max  = 0;
-	for (let i = 0; i < game.theories.length; i++) {
+	for (let i = 0; i < game.researchUpgrades[7].level; i++) {
 		if (!theory.upgrades[i].level) continue;
 		let value = parseFloat(theory.quaternaryValue(i));
 		if (value > max) {
@@ -172,7 +176,7 @@ function switchTheory(manualSwitch = false) {
 
 function refreshTheoryManager() {
 	
-	let theoryId = game.activeTheory.id;
+	let theoryId = game.activeTheory?.id;
 	if (theoryId == 0) theoryManager = new T1;
 	if (theoryId == 1) theoryManager = new T2;
 	if (theoryId == 2) theoryManager = new T3;
@@ -1036,17 +1040,19 @@ class T4 {
 		
 		if (this.theory.currencies[0].value == 0)
 			this.c1.buy(1);
-						
-		buyMax(this.c2, this.theory.currencies[0].value * toBig(2).pow(this.c2.level) * this.getC1 / (this.q * toBig(2).pow(this.c3.level)));
-		
+
+		let k = this.q * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
+
+		buyMax(this.c2, this.theory.currencies[0].value / k);
+
 		buyMax(this.c1, upgradeCost(this.c2) / 10);
-				
-		buyMax(this.c3, this.theory.currencies[0].value * this.q.max(1) * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1));
-				
+
+		buyMax(this.c3, this.theory.currencies[0].value * k);
+
 		buyMax(this.q2, upgradeCost(this.c3) / this.q2weight);
-		
+
 		buyMax(this.q1, upgradeCost(this.c3).min(upgradeCost(this.q2)) / 10);
-				
+
 	}
 	
 	tick(elapsedTime, multiplier) {
@@ -2004,7 +2010,7 @@ class UIutils {
 		buttonFrame.onTouched = (touchEvent) => {
 			if (touchEvent.type == TouchType.SHORTPRESS_RELEASED || touchEvent.type == TouchType.LONGPRESS_RELEASED) {
 				buttonFrame.borderColor = Color.MINIGAME_TILE_BORDER;
-				switchTheory(true);							
+				switchTheory(true);
 			}
 			else if (touchEvent.type == TouchType.PRESSED || touchEvent.type == TouchType.LONGPRESS) {
 				buttonFrame.borderColor = Color.BORDER;
@@ -2110,8 +2116,10 @@ var tick = (elapsedTime, multiplier) => {
 		}
 	}
 	
+	let newR8 = game.researchUpgrades[7].level;
 	let newR9 = getR9();
-	if (R9 !== newR9) {
+	if (R8 !== newR8 || R9 !== newR9) {
+		R8 = newR8;
 		R9 = newR9;
 		theory.invalidateQuaternaryValues();
 	}
