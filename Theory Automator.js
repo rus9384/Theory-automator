@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.6";
+var version = "1.6a";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -1147,7 +1147,7 @@ class T4 {
 
 		let schedulerRefresh = false;
 
-		if (buyMax(this.c2, this.theory.currencies[0].value / k)) schedulerRefresh = true;
+		if (k > 0 && buyMax(this.c2, this.theory.currencies[0].value / k)) schedulerRefresh = true;
 		if (buyMax(this.c1, upgradeCost(this.c2) / 10)) schedulerRefresh = true;
 		if (buyMax(this.c3, this.theory.currencies[0].value * k)) schedulerRefresh = true;
 		if (buyMax(this.q2, upgradeCost(this.c3) / this.q2weight)) schedulerRefresh = true;
