@@ -952,7 +952,7 @@ class T4 {
 	}
 
 	get q() {
-		return parseBigNumber(this.theory.tertiaryEquation.substring(2)).max(Number.MIN_VALUE);
+		return parseBigNumber(this.theory.tertiaryEquation.substring(2));
 	}
 
 	upgradeByIndex(upgradeIndex) {
@@ -989,6 +989,7 @@ class T4 {
 		while (this.scheduledUpgrades.length < 6) {
 
 			let k = this.q * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
+			let p = k > 0 ? 1 / k : 1;
 			let c1WithWeight = this.c1.cost.getCost(this.c1.level + this.scheduledLevels[0]) * (10 + (this.c1.level % 10) / 2);
 			let q1WithWeight = this.q1.cost.getCost(this.q1.level + this.scheduledLevels[3]) * (10 + this.q1.level % 10);
 			let c2cost = this.c2.cost.getCost(this.c2.level + this.scheduledLevels[1]);
@@ -997,7 +998,7 @@ class T4 {
 			let costs = [
 				c1WithWeight < c2cost ? c1WithWeight : veryBigNumber,
 				c2cost * k.max(1),
-				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) / k.max(Number.MIN_VALUE).min(1),
+				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * p.max(1),
 				q1WithWeight < q2cost ? q1WithWeight : veryBigNumber,
 				q2cost * 1.7
 			];
@@ -1134,7 +1135,7 @@ class T4 {
 
 	buy() {
 
-		if (secondaryEquation == "" && this.updateSchedule()) this.showSchedule();
+		if (this.c1.level && secondaryEquation == "" && this.updateSchedule()) this.showSchedule();
 
 		if (buySkip()) return;
 		
@@ -1144,10 +1145,11 @@ class T4 {
 			this.c1.buy(1);
 
 		let k = this.q * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
+		let p = k > 0 ? 1 / k : 1;
 
 		let schedulerRefresh = false;
 
-		if (k > 0 && buyMax(this.c2, this.theory.currencies[0].value / k)) schedulerRefresh = true;
+		if (buyMax(this.c2, this.theory.currencies[0].value * p)) schedulerRefresh = true;
 		if (buyMax(this.c1, upgradeCost(this.c2) / 10)) schedulerRefresh = true;
 		if (buyMax(this.c3, this.theory.currencies[0].value * k)) schedulerRefresh = true;
 		if (buyMax(this.q2, upgradeCost(this.c3) / this.q2weight)) schedulerRefresh = true;
