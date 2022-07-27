@@ -2,7 +2,7 @@ var id = "theory_auto";
 var name = "Theory automator";
 var description = "Automates purchases and publications in theories.";
 var authors = "rus9384";
-var version = "1.6a";
+var version = "1.6b";
 var permissions = Permissions.PERFORM_GAME_ACTIONS;
 
 var theoryManager;
@@ -998,7 +998,7 @@ class T4 {
 			let costs = [
 				c1WithWeight < c2cost ? c1WithWeight : veryBigNumber,
 				c2cost * k.max(1),
-				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * p.max(1),
+				this.c3.cost.getCost(this.c3.level + this.scheduledLevels[2]) * p,
 				q1WithWeight < q2cost ? q1WithWeight : veryBigNumber,
 				q2cost * 1.7
 			];
