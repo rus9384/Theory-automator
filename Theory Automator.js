@@ -76,8 +76,13 @@ var getQuaternaryEntries = () => {
 	let tauH;	
 		
 	for (let i = 0; i < Math.min(8, game.researchUpgrades[7].level); i++) {
-		tau = game.theories[i].tauPublished.log10();
-		tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
+		//Prevent errors when some theories have never been published.
+		try {
+			tau = game.theories[i].tauPublished.log10();
+		} catch(e) {
+			tau = 1;
+		}			
+ tauH = base[i] * R9 ** (1 / timeMult[i]) / 2 ** ((tau - requirements[i]) / decay[i]);
 		quaternaryEntries[i].value = formatQValue(tauH);
 	}
 	for (let i = game.researchUpgrades[7].level; i < 8; i++) {
@@ -91,7 +96,12 @@ var getQuaternaryEntries = () => {
 	base = 1.51;
 	timeMult = 1;
 	
-	tau = game.theories[3].tauPublished.log10();
+	//Prevents errors when this theory has never published.
+	try {
+		tau = game.theories[3].tauPublished.log10();
+	} catch (e) {
+		tau = 1;
+	}
 	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[3]) / decay);
 	quaternaryEntries[3].value = formatQValue(Math.max(tauH, quaternaryEntries[3].value));
 	
@@ -102,7 +112,11 @@ var getQuaternaryEntries = () => {
 	base = 7;
 	timeMult = 2;
 	
-	tau = game.theories[5].tauPublished.log10();
+	try {
+		tau = game.theories[5].tauPublished.log10();
+	} catch(e) {
+		tau = 1;
+	}
 	tauH = base * R9 ** (1 / timeMult) / 2 ** ((tau - requirements[5]) / decay);
 	quaternaryEntries[5].value = formatQValue(Math.max(tauH, quaternaryEntries[5].value));
 
@@ -937,8 +951,10 @@ class T4 {
 		this.q2weight = 1 / (2 - Math.sqrt(2));
 
 		this.setPub();
-
-		this.ratio = this.q * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
+		
+		//Ensures c3 term is always relevant even at low tau. (To prevent strategy
+		//from not buying any c3).
+		this.ratio = 1 + ((this.q + 1.0) * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1));
 
 		this.scheduledUpgrades = [];
 		this.scheduledLevels   = [0, 0, 0, 0, 0];
@@ -1144,16 +1160,17 @@ class T4 {
 		if (this.theory.currencies[0].value == 0)
 			this.c1.buy(1);
 
-		let k = this.q * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
+		let k = (this.q+1) * toBig(2).pow(this.c3.level) / (toBig(2).pow(this.c2.level) * this.getC1);
 		let p = k > 0 ? 1 / k : 1;
 
 		let schedulerRefresh = false;
 
-		if (buyMax(this.c2, this.theory.currencies[0].value * p)) schedulerRefresh = true;
-		if (buyMax(this.c1, upgradeCost(this.c2) / 10)) schedulerRefresh = true;
+		
 		if (buyMax(this.c3, this.theory.currencies[0].value * k)) schedulerRefresh = true;
 		if (buyMax(this.q2, upgradeCost(this.c3) / this.q2weight)) schedulerRefresh = true;
 		if (buyMax(this.q1, upgradeCost(this.c3).min(upgradeCost(this.q2)) / 10)) schedulerRefresh = true;
+		if (buyMax(this.c2, this.theory.currencies[0].value * p)) schedulerRefresh = true;
+		if (buyMax(this.c1, upgradeCost(this.c2) / 10)) schedulerRefresh = true;
 
 		if (!schedulerRefresh && "" + k != "" + this.ratio) 
 			this.showSchedule();
